@@ -6,31 +6,36 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
-  const insforge = createServerClient(
-    process.env.NEXT_PUBLIC_INSFORGE_URL!,
-    process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
+  const insforge = createServerClient({
+    cookies: {
+      get(name: string) {
+        return request.cookies.get(name)?.value;
       },
-    }
-  );
+      set(name: string, value: string, options: any) {
+        request.cookies.set({ name, value, ...options });
+        supabaseResponse = NextResponse.next({
+          request: {
+            headers: request.headers,
+          },
+        });
+        supabaseResponse.cookies.set({ name, value, ...options });
+      },
+      remove(name: string, options: any) {
+        request.cookies.set({ name, value: '', ...options });
+        supabaseResponse = NextResponse.next({
+          request: {
+            headers: request.headers,
+          },
+        });
+        supabaseResponse.cookies.set({ name, value: '', ...options });
+      },
+    },
+  });
 
   // IMPORTANT: Avoid writing any logic between createServerClient and
   // insforge.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
-  await insforge.auth.getUser();
+  await insforge.auth.getCurrentUser();
 
   return supabaseResponse;
 }
