@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "name": "TEST 1 - REAL OTP",
+      "status": "FAIL"
+    },
+    {
+      "name": "TEST 1 - ADMIN OVERRIDE",
+      "status": "FAIL",
+      "error": "User not found"
+    },
+    {
+      "name": "UNEXPECTED ERROR",
+      "status": "FAIL",
+      "error": "page.waitForURL: Timeout 30000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"**/verify\" until \"load\"\n============================================================"
+    }
+  ],
+  "perfMetrics": {}
+}
