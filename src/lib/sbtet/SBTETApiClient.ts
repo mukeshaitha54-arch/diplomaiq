@@ -63,51 +63,41 @@ export interface ApiAttendanceResponse {
 }
 
 export class SBTETApiClient {
-  private async fetchWithRetry(url: string): Promise<string> {
-    const https = await import('https');
-    return new Promise((resolve, reject) => {
-      const req = https.get(url, { rejectUnauthorized: false }, (res) => {
-        if (res.statusCode !== 200) {
-          console.error(`SBTET API returned status code ${res.statusCode} for ${url}`);
-          resolve(''); // Will trigger the 404/down logic
-          return;
-        }
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => resolve(data));
-      });
-      
-      req.setTimeout(8000, () => {
-        req.destroy(new Error('Connection timed out after 8 seconds. SBTET might be blocking the server.'));
+  private getFastApiUrl(): string {
+    return process.env.FASTAPI_URL || 'http://127.0.0.1:8000';
+  }
+
+  private async fetchFromGateway(endpoint: string, pin: string): Promise<any> {
+    const url = `${this.getFastApiUrl()}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pin }),
       });
 
-      req.on('error', (e) => {
-        console.error('HTTPS request error:', e);
-        reject(e);
-      });
-      req.end();
-    });
+      if (!response.ok) {
+        if (response.status === 504) {
+          throw new SBTETError('Connection to SBTET timed out. The server might be down or blocking requests.');
+        }
+        const text = await response.text();
+        throw new SBTETError(`Gateway error (${response.status}): ${text}`);
+      }
+
+      return await response.json();
+    } catch (e: any) {
+      if (e instanceof SBTETError) throw e;
+      throw new SBTETError(`Failed to connect to SBTET Gateway: ${e.message}`);
+    }
   }
 
   async getConsolidatedResults(pin: string): Promise<ApiConsolidatedResponse> {
     try {
-      const url = `https://sbtet.telangana.gov.in/api/api/Results/GetConsolidatedResults?Pin=${pin}`;
-      const rawText = await this.fetchWithRetry(url);
+      const parsedData = await this.fetchFromGateway('/academic-results', pin);
       
-      if (!rawText) {
-        throw new SBTETServerDownError(503);
-      }
-
-      let parsedData;
-      try {
-        parsedData = JSON.parse(rawText);
-        if (typeof parsedData === 'string') {
-          parsedData = JSON.parse(parsedData);
-        }
-      } catch (e) {
-        throw new SBTETServerDownError(500);
-      }
-
       if (!parsedData || !parsedData.Table || parsedData.Table.length === 0) {
         throw new NoResultsAvailableError(pin);
       }
@@ -136,22 +126,7 @@ export class SBTETApiClient {
 
   async getAttendanceReport(pin: string): Promise<ApiAttendanceResponse> {
     try {
-      const url = `https://sbtet.telangana.gov.in/api/api/PreExamination/getAttendanceReport?Pin=${pin}`;
-      const rawText = await this.fetchWithRetry(url);
-      
-      if (!rawText) {
-        return { Table: [] };
-      }
-
-      let parsedData;
-      try {
-        parsedData = JSON.parse(rawText);
-        if (typeof parsedData === 'string') {
-          parsedData = JSON.parse(parsedData);
-        }
-      } catch (e) {
-        return { Table: [] };
-      }
+      const parsedData = await this.fetchFromGateway('/attendance', pin);
 
       if (!parsedData || !parsedData.Table) {
         return { Table: [] };
