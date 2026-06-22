@@ -3,7 +3,11 @@ allowed_redirect_urls = [
   "http://localhost:3000/login",
   "http://localhost:3000/reset-password",
   "http://localhost:3000/dashboard",
-  "http://localhost:3000/verify"
+  "http://localhost:3000/verify",
+  "https://diplomaiq-git-main-iadd.vercel.app/login",
+  "https://diplomaiq-git-main-iadd.vercel.app/reset-password",
+  "https://diplomaiq-git-main-iadd.vercel.app/dashboard",
+  "https://diplomaiq-git-main-iadd.vercel.app/verify"
 ]
 require_email_verification = true
 verify_email_method = "code"

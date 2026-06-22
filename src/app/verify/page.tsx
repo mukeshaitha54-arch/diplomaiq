@@ -30,24 +30,30 @@ export default function VerifyPage() {
     setStage('loading');
     setError(null);
     
-    const formData = new FormData();
-    formData.append("fullName", fullName);
-    formData.append("pin", pin);
-    formData.append("scheme", scheme);
-    formData.append("currentSemester", semester);
-    
-    const result = await verifyStudentIdentity(formData);
-    
-    if (result.success) {
-      setPreviewData(result.data);
-      setStage('preview');
-    } else {
-      if (result.error === 'already_verified') {
-        router.push("/dashboard");
+    try {
+      const formData = new FormData();
+      formData.append("fullName", fullName);
+      formData.append("pin", pin);
+      formData.append("scheme", scheme);
+      formData.append("currentSemester", semester);
+      
+      const result = await verifyStudentIdentity(formData);
+      
+      if (result.success) {
+        setPreviewData(result.data);
+        setStage('preview');
       } else {
-        setError(result.error || "Verification failed.");
-        setStage('input');
+        if (result.error === 'already_verified') {
+          router.push("/dashboard");
+        } else {
+          setError(result.error || "Verification failed.");
+          setStage('input');
+        }
       }
+    } catch (err: any) {
+      console.error("Verification error:", err);
+      setError("Server connection failed or timed out. Telangana SBTET might be blocking requests from Vercel's servers. Please try again later.");
+      setStage('input');
     }
   };
 

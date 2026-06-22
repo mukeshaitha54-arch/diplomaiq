@@ -76,6 +76,11 @@ export class SBTETApiClient {
         res.on('data', chunk => data += chunk);
         res.on('end', () => resolve(data));
       });
+      
+      req.setTimeout(8000, () => {
+        req.destroy(new Error('Connection timed out after 8 seconds. SBTET might be blocking the server.'));
+      });
+
       req.on('error', (e) => {
         console.error('HTTPS request error:', e);
         reject(e);
