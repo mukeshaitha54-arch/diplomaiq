@@ -259,7 +259,6 @@ export async function syncAttendanceAction() {
       last_updated_at: new Date().toISOString()
     }));
     
-    const { adminClient } = await import('../insforge/client');
     const attResult = await adminClient.database.from('attendance_records').upsert(attInserts);
     if (attResult.error) throw new Error(attResult.error.message);
     
