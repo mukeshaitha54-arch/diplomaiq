@@ -64,7 +64,7 @@ export interface ApiAttendanceResponse {
 
 export class SBTETApiClient {
   private getFastApiUrl(): string {
-    return process.env.FASTAPI_URL || 'http://127.0.0.1:8000';
+    return process.env.FASTAPI_URL || 'https://optimistic-spirit-production-00a1.up.railway.app';
   }
 
   private async fetchFromGateway(endpoint: string, pin: string): Promise<any> {
