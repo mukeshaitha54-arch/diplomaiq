@@ -1,0 +1,50 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, User, BarChart3, Target, MessageSquare, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const navigation = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Academic Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+  { name: "ECET Engine", href: "/dashboard/ecet", icon: Target },
+  { name: "AI Coach", href: "/dashboard/coach", icon: MessageSquare },
+  { name: "Sync Data", href: "/dashboard/sync", icon: RefreshCw },
+  { name: "Profile", href: "/dashboard/profile", icon: User },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+
+  return (
+    <div className="hidden border-r border-slate-800 bg-slate-950/50 md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 pt-16">
+      <div className="flex flex-col flex-grow pt-5 overflow-y-auto">
+        <nav className="flex-1 px-4 pb-4 space-y-1">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  isActive ? "bg-indigo-900/50 text-indigo-400" : "text-slate-400 hover:bg-slate-800/50 hover:text-white",
+                  "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors"
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300",
+                    "mr-3 flex-shrink-0 h-5 w-5"
+                  )}
+                  aria-hidden="true"
+                />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
+  );
+}
