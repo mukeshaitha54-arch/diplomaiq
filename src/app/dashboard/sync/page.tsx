@@ -11,24 +11,8 @@ import { insforge } from "@/lib/insforge/browser";
 export default function SyncPage() {
   const router = useRouter();
   
-  const [profile, setProfile] = useState<{ id: string, pin: string, currentSemester: number } | null>(null);
-
-  useEffect(() => {
-    async function loadProfile() {
-      const { data: { user } } = await insforge.auth.getCurrentUser();
-      if (user) {
-        const { data: p } = await insforge.database
-          .from('student_profiles')
-          .select('id, pin, current_semester')
-          .eq('id', user.id)
-          .single();
-        if (p) {
-          setProfile({ id: p.id, pin: p.pin, currentSemester: p.current_semester });
-        }
-      }
-    }
-    loadProfile();
-  }, []);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Results Sync State
   const [resultsStatus, setResultsStatus] = useState<"idle" | "syncing" | "success" | "failed">("idle");
@@ -40,12 +24,10 @@ export default function SyncPage() {
 
   // 1. Multi-Semester Results Sync
   const handleSyncResults = async () => {
-    if (!profile) return;
-    
     setResultsStatus("syncing");
     setResultsError(null);
     
-    const res = await syncAcademicDataAction(profile.id, profile.pin);
+    const res = await syncAcademicDataAction();
     
     if (res.success) {
       setResultsStatus("success");
@@ -57,11 +39,10 @@ export default function SyncPage() {
 
   // 2. Attendance Sync Flow
   const handleStartAttendanceSync = async () => {
-    if (!profile) return;
     setAttStatus("syncing");
     setAttError(null);
     
-    const res = await syncAttendanceAction(profile.id, profile.pin);
+    const res = await syncAttendanceAction();
     if (res.success) {
       setAttStatus("success");
     } else {
@@ -70,7 +51,7 @@ export default function SyncPage() {
     }
   };
 
-  if (!profile) {
+  if (!mounted) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />

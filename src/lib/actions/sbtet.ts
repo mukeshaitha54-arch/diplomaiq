@@ -112,18 +112,25 @@ export async function importVerifiedIdentity(previewData: any) {
 /**
  * Syncs Academic Data using the Consolidated API.
  */
-export async function syncAcademicDataAction(profileId: string, pin: string) {
+export async function syncAcademicDataAction() {
   try {
+    const { auth } = await createInsForgeServerClient();
+    const { data: authData } = await auth.getCurrentUser();
+    if (!authData?.user) return { success: false, error: 'Unauthorized' };
+    const profileId = authData.user.id;
+
     const { adminClient } = await import('../insforge/client');
     const { data: profile, error: profileErr } = await adminClient.database
       .from('student_profiles')
-      .select('current_semester, scheme')
+      .select('current_semester, scheme, pin')
       .eq('id', profileId)
       .single();
       
     if (profileErr || !profile) {
       return { success: false, error: 'Student profile not found.' };
     }
+
+    const pin = profile.pin;
 
     const apiClient = SBTETProvider.getApiClient();
     const startTime = Date.now();
@@ -217,8 +224,23 @@ export async function syncAcademicDataAction(profileId: string, pin: string) {
 /**
  * Syncs attendance using direct API. No Captcha required.
  */
-export async function syncAttendanceAction(profileId: string, pin: string) {
+export async function syncAttendanceAction() {
   try {
+    const { auth } = await createInsForgeServerClient();
+    const { data: authData } = await auth.getCurrentUser();
+    if (!authData?.user) return { success: false, error: 'Unauthorized' };
+    const profileId = authData.user.id;
+
+    const { adminClient } = await import('../insforge/client');
+    const { data: profile } = await adminClient.database
+      .from('student_profiles')
+      .select('pin')
+      .eq('id', profileId)
+      .single();
+      
+    if (!profile) return { success: false, error: 'Student profile not found.' };
+    const pin = profile.pin;
+
     const apiClient = SBTETProvider.getApiClient();
     const startTime = Date.now();
     const attendanceData = await apiClient.getAttendanceReport(pin);
