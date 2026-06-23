@@ -70,29 +70,4 @@ export async function RecentActivityFeed() {
     );
   }
 
-  return (
-    <Card className="bg-slate-900 border-slate-800">
-      <CardHeader>
-        <CardTitle className="text-sm font-medium text-slate-400">Recent Activity</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {logs.map((log: any) => (
-            <div key={log.id} className="flex items-start gap-3">
-              <div className="mt-0.5 bg-slate-800 p-1.5 rounded-full">
-                <Activity className="h-3 w-3 text-indigo-400" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-300">{log.feature_name}</p>
-                <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500">
-                  <Clock className="h-3 w-3" />
-                  {new Date(log.created_at).toLocaleString()}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
