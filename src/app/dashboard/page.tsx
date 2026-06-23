@@ -2,6 +2,7 @@ import { getStudentContext } from "@/lib/actions/context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, BookOpen, GraduationCap, HeartPulse } from "lucide-react";
+import { AchievementBadges } from "@/components/dashboard/achievement-badges";
 
 export default async function DashboardPage() {
   const context = await getStudentContext();
@@ -34,6 +35,8 @@ export default async function DashboardPage() {
   try {
     return (
       <div className="space-y-6">
+        <AchievementBadges context={context!} />
+        
         {/* Top Stat Cards / Metrics Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="bg-slate-900 border-slate-800">
