@@ -15,7 +15,6 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "DiplomaIQ AI",
   description: "AI-Powered Academic Intelligence Platform for Diploma Students",
-  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
