@@ -8,6 +8,7 @@ import { ActionCenter } from "@/components/dashboard/action-center";
 import { RecentActivityFeed } from "@/components/dashboard/recent-activity";
 import { SyncHealthCard } from "@/components/dashboard/sync-health";
 import { GoalTracker } from "@/components/dashboard/goal-tracker";
+import { CareerReadiness } from "@/components/dashboard/career-readiness";
 
 export default async function DashboardPage() {
   const context = await getStudentContext();
@@ -128,6 +129,7 @@ export default async function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <SyncHealthCard context={context!} />
           <GoalTracker context={context!} />
+          <CareerReadiness context={context!} />
           <RecentActivityFeed />
         </div>
       </div>
