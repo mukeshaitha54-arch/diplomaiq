@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { SGPAChart } from "@/components/dashboard/sgpa-chart";
 import { getStudentContext } from "@/lib/actions/context";
 import { ActionCenter } from "@/components/dashboard/action-center";
-import { generateSystemNotifications } from "@/lib/actions/notifications";
 import { AchievementBadges } from "@/components/dashboard/achievement-badges";
 import { RecentActivityFeed } from "@/components/dashboard/recent-activity";
 import { SyncHealthCard } from "@/components/dashboard/sync-health";
@@ -26,9 +25,6 @@ export default async function DashboardPage() {
 
   let displaySummary = null;
   if (hasData && context) {
-    // Generate notifications
-    await generateSystemNotifications(context);
-
     const { profile, academicSummary, semesters, attendance, derivedMetrics } = context;
     const latestAttendance = attendance 
       ? `${attendance.percentage || attendance.attendance_percentage}%` 

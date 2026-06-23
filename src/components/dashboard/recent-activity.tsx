@@ -1,5 +1,3 @@
-"use server";
-
 import { createInsForgeServerClient } from "@/lib/insforge/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Clock } from "lucide-react";
