@@ -239,6 +239,11 @@ export async function syncAcademicDataAction() {
       duration_ms: durationMs,
       error_message: null
     }]);
+
+    // Update profile last synced timestamp
+    await adminClient.database.from('student_profiles').update({
+      last_synced_at: new Date().toISOString()
+    }).eq('id', profileId);
     
     return { success: true };
   } catch (error: any) {
@@ -294,6 +299,11 @@ export async function syncAttendanceAction() {
       duration_ms: durationMs,
       error_message: null
     }]);
+    
+    // Update profile last synced timestamp
+    await adminClient.database.from('student_profiles').update({
+      last_synced_at: new Date().toISOString()
+    }).eq('id', profileId);
     
     return { success: true };
   } catch (error: any) {

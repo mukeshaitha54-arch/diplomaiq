@@ -26,10 +26,10 @@ export default async function DashboardPage() {
       cgpa: academicSummary.cgpa || (academicSummary as any).current_cgpa,
       totalBacklogs: academicSummary.total_backlogs || (academicSummary as any).active_backlogs || 0,
       attendancePercentage: latestAttendance,
-      derivedMetrics: derivedMetrics || {
-        healthScoreBreakdown: { total: 0, category: 'Unknown' },
-        weakSubjects: [],
-        strongSubjects: []
+      derivedMetrics: {
+        ...(derivedMetrics || { healthScoreBreakdown: { total: 0, category: 'Unknown' } }),
+        weakSubjects: academicSummary.weak_subjects || [],
+        strongSubjects: academicSummary.strong_subjects || []
       },
       lastCalculatedAt: new Date(academicSummary.last_calculated_at || Date.now()).toLocaleDateString()
     };
