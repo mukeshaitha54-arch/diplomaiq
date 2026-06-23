@@ -1,7 +1,3 @@
-export default async function DashboardPage() {
-  return (
-    <div>
-      <h1>DASHBOARD TEST</h1>
-    </div>
-  )
+export default function DashboardPage() {
+  return <div>PAGE WORKS</div>;
 }
