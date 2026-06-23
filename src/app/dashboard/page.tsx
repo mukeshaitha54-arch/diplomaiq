@@ -6,6 +6,7 @@ import { AchievementBadges } from "@/components/dashboard/achievement-badges";
 import { WeeklyFocus } from "@/components/dashboard/weekly-focus";
 import { ActionCenter } from "@/components/dashboard/action-center";
 import { RecentActivityFeed } from "@/components/dashboard/recent-activity";
+import { SyncHealthCard } from "@/components/dashboard/sync-health";
 
 export default async function DashboardPage() {
   const context = await getStudentContext();
@@ -124,6 +125,7 @@ export default async function DashboardPage() {
 
         {/* Bottom Widgets */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <SyncHealthCard context={context!} />
           <RecentActivityFeed />
         </div>
       </div>
