@@ -69,7 +69,7 @@ export function Header() {
           </div>
         )}
 
-        <NotificationBell />
+        {/* <NotificationBell /> */}
 
         <DropdownMenu>
           <DropdownMenuTrigger className="relative h-8 w-8 rounded-full outline-none focus:ring-2 focus:ring-indigo-500">

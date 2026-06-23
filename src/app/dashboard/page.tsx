@@ -63,7 +63,7 @@ export default async function DashboardPage() {
 
       {displaySummary && (
         <div className="space-y-6">
-          <AchievementBadges context={context!} />
+          {/* <AchievementBadges context={context!} /> */}
           
           {/* Top Stat Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -137,6 +137,7 @@ export default async function DashboardPage() {
             </Card>
           </div>
 
+          {/*
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-1">
               <WeeklyFocus context={context!} />
@@ -197,6 +198,7 @@ export default async function DashboardPage() {
             <CareerReadiness context={context!} />
             <RecentActivityFeed />
           </div>
+          */}
         </div>
       )}
     </div>
