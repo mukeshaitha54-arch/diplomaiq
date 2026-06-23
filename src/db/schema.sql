@@ -183,3 +183,75 @@ ALTER TABLE ecet_cutoffs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public read access for ecet_cutoffs" 
 ON ecet_cutoffs FOR SELECT USING (true);
+
+-- 10. assessment_instances
+CREATE TABLE assessment_instances (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID REFERENCES student_profiles(id) ON DELETE CASCADE,
+    assessment_type VARCHAR(50) NOT NULL, -- 'mid1', 'mid2', 'internal'
+    semester_number INTEGER NOT NULL,
+    performance_index DECIMAL(4, 2), 
+    total_marks INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(profile_id, semester_number, assessment_type)
+);
+
+-- 11. assessment_subjects
+CREATE TABLE assessment_subjects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    assessment_instance_id UUID REFERENCES assessment_instances(id) ON DELETE CASCADE,
+    subject_code VARCHAR(20) NOT NULL,
+    subject_name VARCHAR(100) NOT NULL,
+    marks_obtained INTEGER,
+    max_marks INTEGER,
+    is_failed BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(assessment_instance_id, subject_code)
+);
+
+-- 12. assessment_summaries
+CREATE TABLE assessment_summaries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID REFERENCES student_profiles(id) ON DELETE CASCADE,
+    assessment_type VARCHAR(50) NOT NULL,
+    aggregate_score DECIMAL(4, 2) DEFAULT 0.00,
+    total_failed_subjects INTEGER DEFAULT 0,
+    strong_subjects TEXT[],
+    weak_subjects TEXT[],
+    last_calculated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(profile_id, assessment_type)
+);
+
+-- 13. prediction_history
+CREATE TABLE prediction_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID REFERENCES student_profiles(id) ON DELETE CASCADE,
+    predicted_sgpa DECIMAL(4, 2),
+    predicted_cgpa DECIMAL(4, 2),
+    predicted_backlogs INTEGER,
+    risk_level VARCHAR(20), -- 'LOW', 'MEDIUM', 'HIGH'
+    based_on_assessment VARCHAR(50), -- e.g., 'mid1'
+    actual_sgpa DECIMAL(4, 2), -- Filled later to measure accuracy
+    accuracy_score DECIMAL(5, 2),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS for new tables
+ALTER TABLE assessment_instances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE assessment_subjects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE assessment_summaries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prediction_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can access own assessment instances" 
+ON assessment_instances FOR ALL USING (profile_id = auth.uid());
+
+CREATE POLICY "Users can access own assessment subjects" 
+ON assessment_subjects FOR ALL USING (
+    assessment_instance_id IN (SELECT id FROM assessment_instances WHERE profile_id = auth.uid())
+);
+
+CREATE POLICY "Users can access own assessment summaries" 
+ON assessment_summaries FOR ALL USING (profile_id = auth.uid());
+
+CREATE POLICY "Users can access own prediction history" 
+ON prediction_history FOR ALL USING (profile_id = auth.uid());

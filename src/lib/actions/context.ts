@@ -2,26 +2,43 @@
 
 import { createInsForgeServerClient } from "@/lib/insforge/server";
 import { cache } from "react";
+import { AcademicDataset } from "../adapters/AcademicDataset";
+import { SemesterAdapter, MidAdapter } from "../adapters";
 
 export interface StudentContext {
   profile: any;
-  academicSummary: any;
-  semesters: any[];
+  academicSummary: any; // Mapped from dataset for backward compatibility
+  semesters: any[]; // Mapped from dataset
   attendance: any | null;
-  subjects: any[];
+  subjects: any[]; // Mapped from dataset
+  dataset: AcademicDataset;
   derivedMetrics: DerivedMetrics;
 }
 
 export interface DerivedMetrics {
+  // Backward compatible fields
   averageSGPA: number;
   bestSemester: number | null;
   lowestSemester: number | null;
+  
+  // New generic fields
+  averageScore: number;
+  bestPeriod: number | null;
+  lowestPeriod: number | null;
+  
   consistencyScore: number;
   healthScoreBreakdown: {
     total: number;
     category: string;
+    
+    // Backward compatible fields
     cgpaContribution: number;
     cgpaMax: number;
+    
+    // New generic fields
+    aggregateContribution: number;
+    aggregateMax: number;
+    
     attendanceContribution: number;
     attendanceMax: number;
     backlogContribution: number;
@@ -31,10 +48,7 @@ export interface DerivedMetrics {
   };
 }
 
-/**
- * Fetches all student records and deduplicates the DB calls within the same request lifecycle.
- */
-export const getStudentContext = cache(async (): Promise<StudentContext | null> => {
+export const getStudentContext = cache(async (datasetType: 'semester' | 'mid1' | 'mid2' | 'internal' = 'semester'): Promise<StudentContext | null> => {
   const { auth } = await createInsForgeServerClient();
   const { data: authData } = await auth.getCurrentUser();
   if (!authData?.user) return null;
@@ -42,24 +56,74 @@ export const getStudentContext = cache(async (): Promise<StudentContext | null> 
 
   const { adminClient } = await import("@/lib/insforge/client");
 
-  const [summaryRes, profileRes, semestersRes, attendanceRes, subjectsRes] = await Promise.all([
-    adminClient.database.from('academic_summary').select('*').eq('profile_id', userId).single(),
+  // Fetch core profile
+  const [profileRes, attendanceRes] = await Promise.all([
     adminClient.database.from('student_profiles').select('*').eq('id', userId).single(),
-    adminClient.database.from('semesters').select('*').eq('profile_id', userId).order('semester_number'),
-    adminClient.database.from('attendance_records').select('*').eq('profile_id', userId).order('last_updated_at', { ascending: false }).limit(1),
-    adminClient.database.from('subjects').select('*').eq('profile_id', userId)
+    adminClient.database.from('attendance_records').select('*').eq('profile_id', userId).order('last_updated_at', { ascending: false }).limit(1)
   ]);
 
   const profile = profileRes.data;
-  const academicSummary = summaryRes.data;
-  const semesters = semestersRes.data || [];
   const attendance = attendanceRes.data?.[0] || null;
-  const subjects = subjectsRes.data || [];
 
-  if (!profile || !academicSummary) return null;
+  if (!profile) return null;
 
-  // Compute Derived Metrics
-  const derivedMetrics = computeDerivedMetrics(academicSummary, semesters, attendance);
+  let dataset: AcademicDataset;
+
+  if (datasetType === 'semester') {
+    const [summaryRes, semestersRes, subjectsRes] = await Promise.all([
+      adminClient.database.from('academic_summary').select('*').eq('profile_id', userId).single(),
+      adminClient.database.from('semesters').select('*').eq('profile_id', userId).order('semester_number'),
+      adminClient.database.from('subjects').select('*').eq('profile_id', userId)
+    ]);
+    if (!summaryRes.data) return null;
+    dataset = SemesterAdapter.adapt(summaryRes.data, semestersRes.data || [], subjectsRes.data || []);
+  } else {
+    const [summaryRes, instancesRes] = await Promise.all([
+      adminClient.database.from('assessment_summaries').select('*').eq('profile_id', userId).eq('assessment_type', datasetType).single(),
+      adminClient.database.from('assessment_instances').select('*').eq('profile_id', userId).eq('assessment_type', datasetType).order('semester_number'),
+    ]);
+
+    const instanceIds = (instancesRes.data || []).map((i: any) => i.id);
+    let subsData: any[] = [];
+    if (instanceIds.length > 0) {
+      const { data } = await adminClient.database.from('assessment_subjects').select('*').in('assessment_instance_id', instanceIds);
+      subsData = data || [];
+    }
+    
+    dataset = MidAdapter.adapt(datasetType, summaryRes.data, instancesRes.data || [], subsData);
+  }
+
+  // Compute generic metrics
+  const derivedMetrics = computeDerivedMetrics(dataset, attendance);
+
+  // Hydrate old fields for backward compatibility, mapping the new abstract dataset properties
+  // directly to the old object schemas expected by the existing UI components.
+  const academicSummary = {
+    cgpa: dataset.summary.aggregateScore,
+    total_backlogs: dataset.summary.totalFailedSubjects,
+    strong_subjects: dataset.summary.strongSubjects,
+    weak_subjects: dataset.summary.weakSubjects,
+    last_calculated_at: dataset.summary.lastCalculatedAt
+  };
+
+  const semesters = dataset.periods.map(p => ({
+    id: p.periodNumber.toString(),
+    semester_number: p.periodNumber,
+    sgpa: p.periodScore,
+    is_passed: p.isPassed,
+    published_date: p.publishedDate
+  }));
+
+  const subjects = dataset.periods.flatMap(p => p.subjects.map(s => ({
+    id: s.subjectCode,
+    semester_number: p.periodNumber,
+    subject_code: s.subjectCode,
+    subject_name: s.subjectName,
+    total_marks: s.marks,
+    grade: s.grade,
+    is_backlog: s.isFailed,
+    result_status: s.isFailed ? 'F' : 'P'
+  })));
 
   return {
     profile,
@@ -67,54 +131,48 @@ export const getStudentContext = cache(async (): Promise<StudentContext | null> 
     semesters,
     attendance,
     subjects,
+    dataset,
     derivedMetrics
   };
 });
 
-function computeDerivedMetrics(summary: any, semesters: any[], attendance: any): DerivedMetrics {
-  let averageSGPA = 0;
-  let bestSemester = null;
-  let lowestSemester = null;
-  let consistencyScore = 100; // 0 to 100
+function computeDerivedMetrics(dataset: AcademicDataset, attendance: any): DerivedMetrics {
+  let averageScore = 0;
+  let bestPeriod = null;
+  let lowestPeriod = null;
+  let consistencyScore = 100;
 
-  if (semesters.length > 0) {
-    const sgpas = semesters.map(s => Number(s.sgpa)).filter(s => !isNaN(s));
-    if (sgpas.length > 0) {
-      averageSGPA = sgpas.reduce((a, b) => a + b, 0) / sgpas.length;
-      bestSemester = Math.max(...sgpas);
-      lowestSemester = Math.min(...sgpas);
+  if (dataset.periods.length > 0) {
+    const scores = dataset.periods.map(p => Number(p.periodScore)).filter(s => !isNaN(s));
+    if (scores.length > 0) {
+      averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+      bestPeriod = Math.max(...scores);
+      lowestPeriod = Math.min(...scores);
       
-      // Calculate consistency: higher variation = lower consistency
-      if (sgpas.length > 1) {
+      if (scores.length > 1) {
         let totalDiff = 0;
-        for (let i = 1; i < sgpas.length; i++) {
-          totalDiff += Math.abs(sgpas[i] - sgpas[i-1]);
+        for (let i = 1; i < scores.length; i++) {
+          totalDiff += Math.abs(scores[i] - scores[i-1]);
         }
-        const avgDiff = totalDiff / (sgpas.length - 1);
-        // If average difference is 0, score is 100. If diff is >= 2.0 points, score is close to 0.
+        const avgDiff = totalDiff / (scores.length - 1);
         consistencyScore = Math.max(0, 100 - (avgDiff * 50));
       }
     }
   }
 
-  // Calculate Health Score 2.0 Breakdown
-  // 40% CGPA, 25% Attendance, 20% Backlogs, 15% Consistency
-  const cgpa = Number(summary.cgpa) || 0;
-  // CGPA contribution: up to 40. (cgpa / 10) * 40
-  const cgpaContribution = Math.min(40, (cgpa / 10) * 40);
+  const aggregateScore = Number(dataset.summary.aggregateScore) || 0;
+  const aggMax = dataset.type === 'semester' ? 10 : 100;
+  const aggregateContribution = Math.min(40, (aggregateScore / aggMax) * 40);
 
   const attnd = attendance ? (Number(attendance.percentage) || Number(attendance.attendance_percentage) || 0) : 0;
-  // Attendance contribution: up to 25. (attnd / 100) * 25
   const attendanceContribution = Math.min(25, (attnd / 100) * 25);
 
-  const backlogs = Number(summary.total_backlogs) || 0;
-  // Backlog contribution: up to 20. 0 backlogs = 20, 1 backlog = 15, 2 = 10, >4 = 0
+  const backlogs = Number(dataset.summary.totalFailedSubjects) || 0;
   const backlogContribution = Math.max(0, 20 - (backlogs * 5));
 
-  // Consistency contribution: up to 15. (consistencyScore / 100) * 15
   const consistencyContribution = (consistencyScore / 100) * 15;
 
-  const totalHealth = Math.round(cgpaContribution + attendanceContribution + backlogContribution + consistencyContribution);
+  const totalHealth = Math.round(aggregateContribution + attendanceContribution + backlogContribution + consistencyContribution);
 
   let category = "At Risk";
   if (totalHealth >= 90) category = "Excellent";
@@ -122,15 +180,29 @@ function computeDerivedMetrics(summary: any, semesters: any[], attendance: any):
   else if (totalHealth >= 60) category = "Needs Attention";
 
   return {
-    averageSGPA: Number(averageSGPA.toFixed(2)),
-    bestSemester,
-    lowestSemester,
+    // Legacy fields mapped exactly
+    averageSGPA: Number(averageScore.toFixed(2)),
+    bestSemester: bestPeriod,
+    lowestSemester: lowestPeriod,
+    
+    // New fields
+    averageScore: Number(averageScore.toFixed(2)),
+    bestPeriod,
+    lowestPeriod,
+    
     consistencyScore: Math.round(consistencyScore),
     healthScoreBreakdown: {
       total: totalHealth,
       category,
-      cgpaContribution: Math.round(cgpaContribution),
+      
+      // Legacy alias
+      cgpaContribution: Math.round(aggregateContribution),
       cgpaMax: 40,
+      
+      // New generic
+      aggregateContribution: Math.round(aggregateContribution),
+      aggregateMax: 40,
+      
       attendanceContribution: Math.round(attendanceContribution),
       attendanceMax: 25,
       backlogContribution,
