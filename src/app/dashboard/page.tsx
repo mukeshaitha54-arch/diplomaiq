@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, AlertTriangle, BookOpen, GraduationCap } from "lucide-react";
 import { createInsForgeServerClient } from "@/lib/insforge/server";
 import { redirect } from "next/navigation";
+import { SGPAChart } from "@/components/dashboard/sgpa-chart";
 
 export default async function DashboardPage() {
   const { auth } = await createInsForgeServerClient();
@@ -27,13 +28,30 @@ export default async function DashboardPage() {
     .eq('id', authData.user.id)
     .single();
 
+  const { data: semesters } = await adminClient.database
+    .from('semesters')
+    .select('semester_number, sgpa, cgpa')
+    .eq('profile_id', authData.user.id)
+    .order('semester_number');
+
+  const { data: attendanceData } = await adminClient.database
+    .from('attendance_records')
+    .select('attendance_percentage')
+    .eq('profile_id', authData.user.id)
+    .order('last_updated_at', { ascending: false })
+    .limit(1);
+
   const hasData = !!summary && !!profile;
+
+  const latestAttendance = attendanceData && attendanceData.length > 0 
+    ? `${attendanceData[0].attendance_percentage}%` 
+    : "N/A";
 
   const displaySummary = {
     cgpa: summary?.cgpa || 0,
     healthScore: summary?.health_score || 0,
     totalBacklogs: summary?.total_backlogs || 0,
-    attendancePercentage: 0, // Attendance aggregation can be added later
+    attendancePercentage: latestAttendance,
     strongSubjects: summary?.strong_subjects || [],
     weakSubjects: summary?.weak_subjects || [],
     lastCalculatedAt: summary?.last_calculated_at ? new Date(summary.last_calculated_at).toLocaleString() : "Never"
@@ -97,8 +115,8 @@ export default async function DashboardPage() {
                 <Activity className="h-4 w-4 text-amber-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">N/A</div>
-                <p className="text-xs text-slate-500 mt-1">Sync attendance to view</p>
+                <div className="text-2xl font-bold text-white">{displaySummary.attendancePercentage}</div>
+                <p className="text-xs text-slate-500 mt-1">Latest attendance</p>
               </CardContent>
             </Card>
           </div>
@@ -109,8 +127,8 @@ export default async function DashboardPage() {
                 <CardTitle className="text-white">SGPA Trend</CardTitle>
                 <CardDescription className="text-slate-400">Your performance across semesters</CardDescription>
               </CardHeader>
-              <CardContent className="h-72 flex items-center justify-center border border-slate-800/50 mx-6 mb-6 rounded-md bg-slate-950/50">
-                <p className="text-sm text-slate-500">[ Line Chart Placeholder ]</p>
+              <CardContent className="h-72 border border-slate-800/50 mx-6 mb-6 rounded-md bg-slate-950/50 p-4">
+                <SGPAChart data={semesters || []} />
               </CardContent>
             </Card>
             

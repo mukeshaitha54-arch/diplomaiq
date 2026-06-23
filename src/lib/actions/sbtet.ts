@@ -197,13 +197,38 @@ export async function syncAcademicDataAction() {
       const { data: subs } = await adminClient.database.from('subjects').select('*').eq('profile_id', profileId);
       const backlogs = subs ? subs.filter((s: any) => s.result_status === 'F').length : 0;
       
+      let strongSubjects: string[] = [];
+      let weakSubjects: string[] = [];
+      
+      if (subs && subs.length > 0) {
+        // Strong subjects: Grade O, A+, A, or score >= 85 (assuming 100 max)
+        const strong = subs.filter((s: any) => {
+          const totalMarks = s.total_marks || 0;
+          return s.grade === 'O' || s.grade === 'A+' || s.grade === 'A' || (totalMarks >= 85);
+        }).sort((a: any, b: any) => (b.total_marks || 0) - (a.total_marks || 0));
+        
+        strongSubjects = strong.slice(0, 4).map((s: any) => s.subject_name);
+
+        // Weak subjects: Failed or lowest marks
+        const failed = subs.filter((s: any) => s.result_status === 'F');
+        if (failed.length > 0) {
+          weakSubjects = failed.map((s: any) => s.subject_name);
+        } else {
+          // Bottom 3 scoring subjects if no backlogs
+          const bottom = [...subs].sort((a: any, b: any) => (a.total_marks || 0) - (b.total_marks || 0));
+          weakSubjects = bottom.slice(0, 3).map((s: any) => s.subject_name);
+        }
+      }
+
       await adminClient.database.from('academic_summary').upsert([{
         profile_id: profileId,
         cgpa: summaryInfo.CGPA,
         total_backlogs: backlogs,
         health_score: Math.max(0, 100 - (backlogs * 10)),
+        strong_subjects: strongSubjects,
+        weak_subjects: weakSubjects,
         last_calculated_at: new Date().toISOString()
-      }]);
+      }], { onConflict: 'profile_id', ignoreDuplicates: false });
     }
 
     // Log Sync Event
@@ -259,7 +284,7 @@ export async function syncAttendanceAction() {
       last_updated_at: new Date().toISOString()
     }));
     
-    const attResult = await adminClient.database.from('attendance_records').upsert(attInserts);
+    const attResult = await adminClient.database.from('attendance_records').upsert(attInserts, { onConflict: 'profile_id,semester', ignoreDuplicates: false });
     if (attResult.error) throw new Error(attResult.error.message);
     
     await adminClient.database.from('sync_logs').insert([{
