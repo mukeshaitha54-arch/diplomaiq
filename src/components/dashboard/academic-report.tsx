@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Download } from "lucide-react";
@@ -13,6 +14,8 @@ export function AcademicReport() {
   const [loading, setLoading] = useState(false);
   const [reportText, setReportText] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const datasetType = searchParams.get('dataset') || 'semester';
 
   const handlePrint = useReactToPrint({
     contentRef: contentRef,
@@ -22,10 +25,10 @@ export function AcademicReport() {
     }
   });
 
-  const handleGenerate = async () => {
+    const handleGenerate = async () => {
     setLoading(true);
     try {
-      const result = await generateAcademicReport();
+      const result = await generateAcademicReport(datasetType);
       setReportText(result);
     } catch (e) {
       console.error(e);

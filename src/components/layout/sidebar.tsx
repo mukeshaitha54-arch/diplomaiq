@@ -13,6 +13,7 @@ const navigation = [
   { name: "ECET Engine", href: "/dashboard/ecet", icon: Target },
   { name: "AI Coach", href: "/dashboard/coach", icon: MessageSquare },
   { name: "Sync Data", href: "/dashboard/sync", icon: RefreshCw },
+  { name: "Mid-Sem Entry", href: "/dashboard/mid-entry", icon: Target }, // Using Target icon or similar
   { name: "Profile", href: "/dashboard/profile", icon: User },
 ];
 

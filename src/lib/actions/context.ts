@@ -13,6 +13,7 @@ export interface StudentContext {
   subjects: any[]; // Mapped from dataset
   dataset: AcademicDataset;
   derivedMetrics: DerivedMetrics;
+  prediction: any | null; // Latest prediction
 }
 
 export interface DerivedMetrics {
@@ -56,14 +57,16 @@ export const getStudentContext = cache(async (datasetType: 'semester' | 'mid1' |
 
   const { adminClient } = await import("@/lib/insforge/client");
 
-  // Fetch core profile
-  const [profileRes, attendanceRes] = await Promise.all([
+  // Fetch core profile and latest prediction
+  const [profileRes, attendanceRes, predictionRes] = await Promise.all([
     adminClient.database.from('student_profiles').select('*').eq('id', userId).single(),
-    adminClient.database.from('attendance_records').select('*').eq('profile_id', userId).order('last_updated_at', { ascending: false }).limit(1)
+    adminClient.database.from('attendance_records').select('*').eq('profile_id', userId).order('last_updated_at', { ascending: false }).limit(1),
+    adminClient.database.from('prediction_history').select('*').eq('profile_id', userId).order('created_at', { ascending: false }).limit(1)
   ]);
 
   const profile = profileRes.data;
   const attendance = attendanceRes.data?.[0] || null;
+  const prediction = predictionRes.data?.[0] || null;
 
   if (!profile) return null;
 
@@ -132,7 +135,8 @@ export const getStudentContext = cache(async (datasetType: 'semester' | 'mid1' |
     attendance,
     subjects,
     dataset,
-    derivedMetrics
+    derivedMetrics,
+    prediction
   };
 });
 

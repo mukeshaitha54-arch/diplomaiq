@@ -88,13 +88,47 @@ export async function generateSystemNotifications(context: StudentContext) {
     }
 
     // 2. Zero Backlogs Achievement
-    const backlogs = context.academicSummary?.total_backlogs || 0;
+    const backlogs = context.dataset.summary.totalFailedSubjects || 0;
     if (backlogs === 0 && context.semesters.length > 0 && !recentTitles.has("Flawless Record Achieved!")) {
       newNotifications.push({
         profile_id: userId,
         title: "Flawless Record Achieved!",
-        message: "Congratulations on maintaining 0 active backlogs. Keep up the excellent work!",
+        message: `Congratulations on maintaining 0 active/failed subjects in your ${context.dataset.labels.aggregate} data. Keep up the excellent work!`,
         type: 'success'
+      });
+    }
+
+    // 3. Mid Risk Alerts / Prediction Warnings
+    if (context.prediction) {
+      if (context.prediction.risk_level === 'HIGH' && !recentTitles.has("High Risk Assessment")) {
+        newNotifications.push({
+          profile_id: userId,
+          title: "High Risk Assessment",
+          message: `Your ${context.prediction.based_on_assessment} results indicate a HIGH risk for final exams. Predicted ${context.prediction.predicted_backlogs} backlogs.`,
+          type: 'warning'
+        });
+      }
+      
+      if (context.prediction.predicted_backlogs > 0 && context.prediction.risk_level !== 'HIGH' && !recentTitles.has("Predicted Backlog Warning")) {
+         newNotifications.push({
+          profile_id: userId,
+          title: "Predicted Backlog Warning",
+          message: `Based on your recent performance, you are at risk of ${context.prediction.predicted_backlogs} backlogs. Take action now.`,
+          type: 'warning'
+        });
+      }
+    }
+
+    // 4. Performance Drop Warning
+    const currentScore = context.dataset.summary.aggregateScore;
+    const avgScore = context.derivedMetrics.averageScore;
+    // Score drop threshold: 15% drop compared to average
+    if (currentScore > 0 && avgScore > 0 && currentScore < (avgScore * 0.85) && !recentTitles.has("Significant Performance Drop")) {
+       newNotifications.push({
+        profile_id: userId,
+        title: "Significant Performance Drop",
+        message: `Your current ${context.dataset.labels.aggregate} (${currentScore}) is significantly lower than your historical average (${avgScore}). Please review your weak subjects.`,
+        type: 'warning'
       });
     }
 

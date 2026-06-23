@@ -40,26 +40,29 @@ export async function generateAIResponse(
 // AI Coach Specific Logic
 // ==========================================
 
-export async function getPersonalizedCoachAdvice() {
-  const context = await getStudentContext();
+export async function getPersonalizedCoachAdvice(datasetType: string = 'semester') {
+  const context = await getStudentContext(datasetType as any);
   if (!context) return "We need more academic data to provide personalized coaching. Please sync your results first.";
 
-  const { profile, academicSummary, attendance, derivedMetrics } = context;
+  const { profile, dataset, attendance, derivedMetrics, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
+  
+  const predictionStr = prediction ? `\n- Predicted Final SGPA: ${prediction.predicted_sgpa}\n- Backlog Risk: ${prediction.predicted_backlogs}\n- Risk Level: ${prediction.risk_level}` : "";
 
   const prompt = `
 Generate a personalized academic coaching strategy for this student.
 
-STUDENT CONTEXT:
+STUDENT CONTEXT (Dataset: ${dataset.type}):
 - Current Semester: ${profile.current_semester}
 - Branch: ${profile.branch}
-- Current CGPA: ${academicSummary.cgpa}
-- Average SGPA: ${derivedMetrics.averageSGPA}
+- ${dataset.labels.aggregate}: ${dataset.summary.aggregateScore}
+- Average ${dataset.labels.period}: ${derivedMetrics.averageScore}
 - Consistency Score: ${derivedMetrics.consistencyScore}/100
-- Active Backlogs: ${academicSummary.total_backlogs}
+- Active/Failed Subjects: ${dataset.summary.totalFailedSubjects}
 - Attendance: ${attendanceStr}
-- Strong Subjects: ${academicSummary.strong_subjects?.join(", ") || "None"}
-- Weak Subjects: ${academicSummary.weak_subjects?.join(", ") || "None"}
+- Strong Subjects: ${dataset.summary.strongSubjects?.join(", ") || "None"}
+- Weak Subjects: ${dataset.summary.weakSubjects?.join(", ") || "None"}
+${predictionStr}
 
 You MUST return your response in the exact markdown structure below:
 
@@ -92,21 +95,24 @@ Time Estimate: [How much time it will take]
   return await generateAIResponse('openai', 'gpt-4o', prompt);
 }
 
-export async function generateActionItems() {
-  const context = await getStudentContext();
+export async function generateActionItems(datasetType: string = 'semester') {
+  const context = await getStudentContext(datasetType as any);
   if (!context) return null;
 
-  const { profile, academicSummary, attendance } = context;
+  const { profile, dataset, attendance, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
+
+  const predictionStr = prediction ? `\nPredicted Final SGPA: ${prediction.predicted_sgpa}, Predicted Backlogs: ${prediction.predicted_backlogs}` : "";
 
   const prompt = `
 You are an AI generating structured action items for an engineering student.
 
-CONTEXT:
+CONTEXT (Dataset: ${dataset.type}):
 Branch: ${profile.branch}, Semester: ${profile.current_semester}
-CGPA: ${academicSummary.cgpa}, Backlogs: ${academicSummary.total_backlogs}
+${dataset.labels.aggregate}: ${dataset.summary.aggregateScore}, Failed Subjects: ${dataset.summary.totalFailedSubjects}
 Attendance: ${attendanceStr}
-Weak Subjects: ${academicSummary.weak_subjects?.join(", ") || "None"}
+Weak Subjects: ${dataset.summary.weakSubjects?.join(", ") || "None"}
+${predictionStr}
 
 Generate the top 5 most important action items for this student. 
 Return ONLY a valid JSON array of objects, with no markdown code blocks or extra text.
@@ -132,24 +138,27 @@ Format:
   }
 }
 
-export async function generateAcademicReport() {
-  const context = await getStudentContext();
+export async function generateAcademicReport(datasetType: string = 'semester') {
+  const context = await getStudentContext(datasetType as any);
   if (!context) return "No data available to generate report.";
 
-  const { profile, academicSummary, attendance, derivedMetrics } = context;
+  const { profile, dataset, attendance, derivedMetrics, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
+  
+  const predictionStr = prediction ? `\nPredicted Final SGPA: ${prediction.predicted_sgpa}, Predicted Backlogs: ${prediction.predicted_backlogs}` : "";
 
   const prompt = `
 Generate a comprehensive Academic Report for this student.
 
-CONTEXT:
+CONTEXT (Dataset: ${dataset.type}):
 Branch: ${profile.branch}, Semester: ${profile.current_semester}
-CGPA: ${academicSummary.cgpa}, Best Semester SGPA: ${derivedMetrics.bestSemester}, Average SGPA: ${derivedMetrics.averageSGPA}
+${dataset.labels.aggregate}: ${dataset.summary.aggregateScore}, Best ${dataset.labels.period}: ${derivedMetrics.bestPeriod}, Average ${dataset.labels.period}: ${derivedMetrics.averageScore}
 Consistency Score: ${derivedMetrics.consistencyScore}/100
-Active Backlogs: ${academicSummary.total_backlogs}
+Active/Failed Subjects: ${dataset.summary.totalFailedSubjects}
 Attendance: ${attendanceStr}
-Strong Subjects: ${academicSummary.strong_subjects?.join(", ") || "None"}
-Weak Subjects: ${academicSummary.weak_subjects?.join(", ") || "None"}
+Strong Subjects: ${dataset.summary.strongSubjects?.join(", ") || "None"}
+Weak Subjects: ${dataset.summary.weakSubjects?.join(", ") || "None"}
+${predictionStr}
 
 You MUST include the following 11 sections in markdown format (use exactly these H2 headers):
 ## 1. Academic Overview
@@ -174,22 +183,25 @@ You MUST include the following 11 sections in markdown format (use exactly these
 // AI Study Planner Specific Logic
 // ==========================================
 
-export async function generateStudyPlan(planType: 'daily' | 'weekly' | 'exam') {
-  const context = await getStudentContext();
+export async function generateStudyPlan(planType: 'daily' | 'weekly' | 'exam', datasetType: string = 'semester') {
+  const context = await getStudentContext(datasetType as any);
   if (!context) return "Please sync your academic records to generate a study plan.";
 
-  const { profile, academicSummary, attendance } = context;
+  const { profile, dataset, attendance, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
+
+  const predictionStr = prediction ? `\nPredicted Final SGPA: ${prediction.predicted_sgpa}, Predicted Backlogs: ${prediction.predicted_backlogs}` : "";
 
   const prompt = `
 Generate a highly structured ${planType} study plan for an engineering diploma student.
 
-CONTEXT:
+CONTEXT (Dataset: ${dataset.type}):
 Branch: ${profile.branch}, Semester: ${profile.current_semester}
-CGPA: ${academicSummary.cgpa}, Backlogs: ${academicSummary.total_backlogs}
+${dataset.labels.aggregate}: ${dataset.summary.aggregateScore}, Failed Subjects: ${dataset.summary.totalFailedSubjects}
 Attendance: ${attendanceStr}
-Weak Subjects (Need immediate attention): ${academicSummary.weak_subjects?.join(", ") || "None"}
-Strong Subjects (Maintenance only): ${academicSummary.strong_subjects?.join(", ") || "None"}
+Weak Subjects (Need immediate attention): ${dataset.summary.weakSubjects?.join(", ") || "None"}
+Strong Subjects (Maintenance only): ${dataset.summary.strongSubjects?.join(", ") || "None"}
+${predictionStr}
 
 Requirements for the ${planType} plan:
 - Adapt the intensity based on their CGPA and backlogs (high backlogs require intensive recovery, high CGPA requires optimization).

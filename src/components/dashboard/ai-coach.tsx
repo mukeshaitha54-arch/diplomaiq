@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { getPersonalizedCoachAdvice, generateStudyPlan } from "@/lib/actions/ai";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ export function AICoachComponent() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'coach' | 'daily' | 'weekly' | 'exam'>('coach');
   const [content, setContent] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const datasetType = searchParams.get('dataset') || 'semester';
 
   const fetchContent = async (tab: 'coach' | 'daily' | 'weekly' | 'exam') => {
     setLoading(true);
@@ -17,10 +20,10 @@ export function AICoachComponent() {
     setContent(null);
     try {
       if (tab === 'coach') {
-        const res = await getPersonalizedCoachAdvice();
+        const res = await getPersonalizedCoachAdvice(datasetType);
         setContent(res);
       } else {
-        const res = await generateStudyPlan(tab);
+        const res = await generateStudyPlan(tab, datasetType);
         setContent(res);
       }
     } catch (err) {

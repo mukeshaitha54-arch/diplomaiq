@@ -10,9 +10,15 @@ import { SyncHealthCard } from "@/components/dashboard/sync-health";
 import { GoalTracker } from "@/components/dashboard/goal-tracker";
 import { CareerReadiness } from "@/components/dashboard/career-readiness";
 import { SGPAChart } from "@/components/dashboard/sgpa-chart";
+import { DatasetSelector } from "@/components/dashboard/dataset-selector";
 
-export default async function DashboardPage() {
-  const context = await getStudentContext();
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const datasetType = typeof searchParams.dataset === 'string' ? searchParams.dataset : 'semester';
+  const context = await getStudentContext(datasetType as any);
   const hasData = !!context?.profile && !!context?.academicSummary;
 
   let displaySummary: any = null;
@@ -42,7 +48,10 @@ export default async function DashboardPage() {
   try {
     return (
       <div className="space-y-6">
-        <AchievementBadges context={context!} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <AchievementBadges context={context!} />
+          <DatasetSelector activeDataset={datasetType} />
+        </div>
         
         {/* Top Stat Cards / Metrics Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -86,7 +95,7 @@ export default async function DashboardPage() {
           
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-400">Current CGPA</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-400">{context?.dataset?.labels?.aggregate || "Current CGPA"}</CardTitle>
               <GraduationCap className="h-4 w-4 text-teal-400" />
             </CardHeader>
             <CardContent>
@@ -122,7 +131,7 @@ export default async function DashboardPage() {
             <WeeklyFocus context={context!} />
           </div>
           <div className="md:col-span-2">
-            <ActionCenter />
+            <ActionCenter context={context!} />
           </div>
         </div>
 
@@ -130,7 +139,7 @@ export default async function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card className="col-span-4 bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-white">SGPA Trend</CardTitle>
+              <CardTitle className="text-white">{context?.dataset?.labels?.period || "SGPA"} Trend</CardTitle>
               <CardDescription className="text-slate-400">Your performance across semesters</CardDescription>
             </CardHeader>
             <CardContent className="h-72 border border-slate-800/50 mx-6 mb-6 rounded-md bg-slate-950/50 p-4">

@@ -6,15 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Zap, AlertCircle, CheckCircle2 } from "lucide-react";
 import { generateActionItems } from "@/lib/actions/ai";
+import { StudentContext } from "@/lib/actions/context";
 
-export function ActionCenter() {
+export function ActionCenter({ context }: { context?: StudentContext }) {
   const [loading, setLoading] = useState(false);
   const [actions, setActions] = useState<any[]>([]);
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const result = await generateActionItems();
+      const result = await generateActionItems(context?.dataset?.type || 'semester');
       if (result && Array.isArray(result)) {
         setActions(result);
       }
@@ -78,6 +79,32 @@ export function ActionCenter() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : context?.prediction ? (
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2 p-4 rounded-lg border border-slate-800 bg-slate-950/50">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-indigo-400" />
+                  <h4 className="text-sm font-medium text-slate-200">AI Prediction Active</h4>
+                </div>
+                <Badge variant="outline" className={getPriorityColor(context.prediction.risk_level)}>
+                  {context.prediction.risk_level} RISK
+                </Badge>
+              </div>
+              <div className="pl-6 text-sm text-slate-400 space-y-1">
+                <p>Based on your {context.prediction.based_on_assessment} results, your predicted final score is <strong className="text-slate-200">{context.prediction.predicted_sgpa}</strong>.</p>
+                {context.prediction.predicted_backlogs > 0 && (
+                  <p className="text-rose-400">Warning: You are at risk of {context.prediction.predicted_backlogs} backlogs.</p>
+                )}
+              </div>
+              <div className="pl-6 mt-2">
+                <Button onClick={handleGenerate} disabled={loading} variant="outline" size="sm" className="h-8 text-xs border-indigo-600 text-indigo-400 hover:bg-indigo-950">
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Generate Action Plan
+                </Button>
+              </div>
+            </div>
           </div>
         ) : (
           !loading && (
