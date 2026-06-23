@@ -26,8 +26,8 @@ export default async function DashboardPage() {
 
   let displaySummary = null;
   if (hasData && context) {
-    // Generate notifications asynchronously
-    generateSystemNotifications(context);
+    // Generate notifications
+    await generateSystemNotifications(context);
 
     const { profile, academicSummary, semesters, attendance, derivedMetrics } = context;
     const latestAttendance = attendance 
