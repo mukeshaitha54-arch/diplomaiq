@@ -5,6 +5,7 @@ import { Activity, BookOpen, GraduationCap, HeartPulse } from "lucide-react";
 import { AchievementBadges } from "@/components/dashboard/achievement-badges";
 import { WeeklyFocus } from "@/components/dashboard/weekly-focus";
 import { ActionCenter } from "@/components/dashboard/action-center";
+import { RecentActivityFeed } from "@/components/dashboard/recent-activity";
 
 export default async function DashboardPage() {
   const context = await getStudentContext();
@@ -119,6 +120,11 @@ export default async function DashboardPage() {
           <div className="md:col-span-2">
             <ActionCenter />
           </div>
+        </div>
+
+        {/* Bottom Widgets */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <RecentActivityFeed />
         </div>
       </div>
     );
