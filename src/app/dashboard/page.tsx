@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, BookOpen, GraduationCap, HeartPulse } from "lucide-react";
 import { AchievementBadges } from "@/components/dashboard/achievement-badges";
+import { WeeklyFocus } from "@/components/dashboard/weekly-focus";
 
 export default async function DashboardPage() {
   const context = await getStudentContext();
@@ -107,6 +108,16 @@ export default async function DashboardPage() {
               <p className="text-xs text-slate-500 mt-1">Latest attendance</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Weekly Focus & Action Center Grid */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <WeeklyFocus context={context!} />
+          </div>
+          <div className="md:col-span-2">
+            {/* <ActionCenter /> */}
+          </div>
         </div>
       </div>
     );
