@@ -15,6 +15,7 @@ import {
 import { Menu } from 'lucide-react';
 import { insforge } from '@/lib/insforge/browser';
 import { signOutAction } from '@/lib/insforge/actions';
+import { NotificationBell } from '@/components/layout/notification-bell';
 
 interface AuthUser {
   id: string;
@@ -67,6 +68,8 @@ export function Header() {
             <span className="text-xs text-slate-400">{user.email}</span>
           </div>
         )}
+
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger className="relative h-8 w-8 rounded-full outline-none focus:ring-2 focus:ring-indigo-500">

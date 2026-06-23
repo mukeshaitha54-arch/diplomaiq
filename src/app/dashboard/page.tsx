@@ -6,6 +6,13 @@ import { redirect } from "next/navigation";
 import { SGPAChart } from "@/components/dashboard/sgpa-chart";
 import { getStudentContext } from "@/lib/actions/context";
 import { ActionCenter } from "@/components/dashboard/action-center";
+import { generateSystemNotifications } from "@/lib/actions/notifications";
+import { AchievementBadges } from "@/components/dashboard/achievement-badges";
+import { RecentActivityFeed } from "@/components/dashboard/recent-activity";
+import { SyncHealthCard } from "@/components/dashboard/sync-health";
+import { CareerReadiness } from "@/components/dashboard/career-readiness";
+import { GoalTracker } from "@/components/dashboard/goal-tracker";
+import { WeeklyFocus } from "@/components/dashboard/weekly-focus";
 
 export default async function DashboardPage() {
   const { auth } = await createInsForgeServerClient();
@@ -19,6 +26,9 @@ export default async function DashboardPage() {
 
   let displaySummary = null;
   if (hasData && context) {
+    // Generate notifications asynchronously
+    generateSystemNotifications(context);
+
     const { profile, academicSummary, semesters, attendance, derivedMetrics } = context;
     const latestAttendance = attendance 
       ? `${attendance.percentage || attendance.attendance_percentage}%` 
@@ -56,7 +66,9 @@ export default async function DashboardPage() {
       )}
 
       {displaySummary && (
-        <>
+        <div className="space-y-6">
+          <AchievementBadges context={context!} />
+          
           {/* Top Stat Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-slate-900 border-slate-800">
@@ -78,20 +90,20 @@ export default async function DashboardPage() {
                 </div>
                 <div className="mt-3 space-y-1 text-xs text-slate-400">
                   <div className="flex justify-between">
-                    <span>CGPA</span>
-                    <span>{displaySummary.derivedMetrics.healthScoreBreakdown.cgpaContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.cgpaMax}</span>
+                    <span className="text-slate-300">CGPA</span>
+                    <span>Score: {displaySummary.derivedMetrics.healthScoreBreakdown.cgpaContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.cgpaMax}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Attendance</span>
-                    <span>{displaySummary.derivedMetrics.healthScoreBreakdown.attendanceContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.attendanceMax}</span>
+                    <span className="text-slate-300">Attendance</span>
+                    <span>Score: {displaySummary.derivedMetrics.healthScoreBreakdown.attendanceContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.attendanceMax}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Backlogs</span>
-                    <span>{displaySummary.derivedMetrics.healthScoreBreakdown.backlogContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.backlogMax}</span>
+                    <span className="text-slate-300">Backlogs ({displaySummary.totalBacklogs} Active)</span>
+                    <span>Score: {displaySummary.derivedMetrics.healthScoreBreakdown.backlogContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.backlogMax}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Consistency</span>
-                    <span>{displaySummary.derivedMetrics.healthScoreBreakdown.consistencyContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.consistencyMax}</span>
+                    <span className="text-slate-300">Consistency</span>
+                    <span>Score: {displaySummary.derivedMetrics.healthScoreBreakdown.consistencyContribution}/{displaySummary.derivedMetrics.healthScoreBreakdown.consistencyMax}</span>
                   </div>
                 </div>
               </CardContent>
@@ -129,8 +141,13 @@ export default async function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
-            <ActionCenter />
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="md:col-span-1">
+              <WeeklyFocus context={context!} />
+            </div>
+            <div className="md:col-span-2">
+              <ActionCenter />
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -177,7 +194,14 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-        </>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <SyncHealthCard context={context!} />
+            <GoalTracker context={context!} />
+            <CareerReadiness context={context!} />
+            <RecentActivityFeed />
+          </div>
+        </div>
       )}
     </div>
   );

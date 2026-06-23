@@ -4,8 +4,10 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 interface AttendanceChartProps {
   data: {
-    semester_number: number;
-    percentage: number;
+    semester?: number;
+    semester_number?: number;
+    attendance_percentage?: number;
+    percentage?: number;
   }[];
 }
 
@@ -15,8 +17,8 @@ export function AttendanceChart({ data }: AttendanceChartProps) {
   }
 
   const formattedData = data.map(d => ({
-    name: `Sem ${d.semester_number}`,
-    percentage: d.percentage
+    name: `Sem ${d.semester || d.semester_number}`,
+    percentage: d.attendance_percentage || d.percentage
   }));
 
   return (

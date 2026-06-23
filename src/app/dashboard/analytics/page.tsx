@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { SubjectChart } from "@/components/dashboard/subject-chart";
 import { AttendanceChart } from "@/components/dashboard/attendance-chart";
 import { SGPAChart } from "@/components/dashboard/sgpa-chart";
+import { AttendanceIntelligence } from "@/components/dashboard/attendance-intelligence";
 import { Badge } from "@/components/ui/badge";
 
 export default async function AnalyticsPage() {
@@ -33,8 +34,8 @@ export default async function AnalyticsPage() {
   // Fetch subjects
   const { data: subjects } = await adminClient.database
     .from('subjects')
-    .select('*, semesters!inner(profile_id, semester_number)')
-    .eq('semesters.profile_id', authData.user.id)
+    .select('*')
+    .eq('profile_id', authData.user.id)
     .order('created_at');
 
   // Fetch attendance
@@ -42,7 +43,7 @@ export default async function AnalyticsPage() {
     .from('attendance_records')
     .select('*')
     .eq('profile_id', authData.user.id)
-    .order('semester_number');
+    .order('semester');
 
   const hasData = !!summary && semesters && semesters.length > 0;
 
@@ -74,6 +75,7 @@ export default async function AnalyticsPage() {
 
   const subjectData = subjects ? subjects.map((s: any) => ({
     subject_code: s.subject_code,
+    subject_name: s.subject_name,
     total_marks: s.total_marks || 0,
     grade: s.grade || "F"
   })) : [];
@@ -140,7 +142,11 @@ export default async function AnalyticsPage() {
             <CardDescription className="text-slate-400">Total marks per subject across all semesters</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <SubjectChart data={subjectData} />
+            {subjectData.length > 0 ? (
+              <SubjectChart data={subjectData} />
+            ) : (
+              <div className="flex h-full items-center justify-center text-slate-500">No subject data available</div>
+            )}
           </CardContent>
         </Card>
 
@@ -220,6 +226,13 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Attendance Intelligence Module */}
+      {attendanceRecords && attendanceRecords.length > 0 && (
+        <div className="mt-6">
+          <AttendanceIntelligence latestRecord={attendanceRecords[attendanceRecords.length - 1]} />
+        </div>
+      )}
 
     </div>
   );

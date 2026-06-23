@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface SubjectChartProps {
   data: {
     subject_code: string;
+    subject_name: string;
     total_marks: number;
     grade: string;
   }[];
@@ -28,13 +29,14 @@ export function SubjectChart({ data }: SubjectChartProps) {
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
         <XAxis 
-          dataKey="subject_code" 
+          dataKey="subject_name" 
           stroke="#64748b" 
           fontSize={10} 
           tickLine={false}
           axisLine={false}
           angle={-45}
           textAnchor="end"
+          tickFormatter={(value) => value.length > 15 ? `${value.substring(0, 15)}...` : value}
         />
         <YAxis 
           stroke="#64748b" 
@@ -47,6 +49,7 @@ export function SubjectChart({ data }: SubjectChartProps) {
           contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc' }}
           itemStyle={{ color: '#38bdf8' }}
           cursor={{ fill: '#1e293b', opacity: 0.4 }}
+          labelFormatter={(label) => label}
         />
         <Bar dataKey="total_marks" radius={[4, 4, 0, 0]}>
           {data.map((entry, index) => (
