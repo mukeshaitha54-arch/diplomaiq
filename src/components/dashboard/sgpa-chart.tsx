@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface SGPAChartProps {
@@ -10,11 +11,24 @@ interface SGPAChartProps {
 }
 
 export function SGPAChart({ data }: SGPAChartProps) {
-  if (!data || data.length === 0) {
-    return <div className="flex h-full items-center justify-center text-slate-500">No semester data available</div>;
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const safeData = Array.isArray(data) ? data : [];
+  console.log("Chart data SGPA", safeData);
+
+  if (!safeData.length) {
+    return <div className="flex h-full items-center justify-center text-slate-500">No chart data</div>;
   }
 
-  const formattedData = data.map(d => ({
+  if (!mounted) {
+    return <div className="h-full w-full bg-slate-900/20 animate-pulse rounded-md" />;
+  }
+
+  const formattedData = safeData.map(d => ({
     name: `Sem ${d.semester_number}`,
     sgpa: d.sgpa
   }));

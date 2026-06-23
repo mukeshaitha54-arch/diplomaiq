@@ -1,5 +1,5 @@
 import { getStudentContext } from "@/lib/actions/context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, BookOpen, GraduationCap, HeartPulse } from "lucide-react";
 import { AchievementBadges } from "@/components/dashboard/achievement-badges";
@@ -9,6 +9,7 @@ import { RecentActivityFeed } from "@/components/dashboard/recent-activity";
 import { SyncHealthCard } from "@/components/dashboard/sync-health";
 import { GoalTracker } from "@/components/dashboard/goal-tracker";
 import { CareerReadiness } from "@/components/dashboard/career-readiness";
+import { SGPAChart } from "@/components/dashboard/sgpa-chart";
 
 export default async function DashboardPage() {
   const context = await getStudentContext();
@@ -123,6 +124,70 @@ export default async function DashboardPage() {
           <div className="md:col-span-2">
             <ActionCenter />
           </div>
+        </div>
+
+        {/* Charts Layer */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="col-span-4 bg-slate-900 border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-white">SGPA Trend</CardTitle>
+              <CardDescription className="text-slate-400">Your performance across semesters</CardDescription>
+            </CardHeader>
+            <CardContent className="h-72 border border-slate-800/50 mx-6 mb-6 rounded-md bg-slate-950/50 p-4">
+              {(() => {
+                try {
+                  return <SGPAChart data={context?.semesters || []} />;
+                } catch (error) {
+                  console.error("CHART FAILED", error);
+                  return <div>CHART FAILED</div>;
+                }
+              })()}
+            </CardContent>
+          </Card>
+          
+          <Card className="col-span-3 bg-slate-900 border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-white">Subject Analysis</CardTitle>
+              <CardDescription className="text-slate-400">Precomputed strengths and weaknesses</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {(() => {
+                try {
+                  return (
+                    <>
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-slate-300">Strong Subjects</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {displaySummary.derivedMetrics.strongSubjects?.length > 0 ? displaySummary.derivedMetrics.strongSubjects.map((sub: string, i: number) => (
+                            <Badge key={i} variant="outline" className="bg-teal-950/30 text-teal-400 border-teal-900">
+                              {sub}
+                            </Badge>
+                          )) : <span className="text-sm text-slate-500">No data</span>}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-slate-300">Needs Improvement</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {displaySummary.derivedMetrics.weakSubjects?.length > 0 ? displaySummary.derivedMetrics.weakSubjects.map((sub: string, i: number) => (
+                            <Badge key={i} variant="outline" className="bg-rose-950/30 text-rose-400 border-rose-900">
+                              {sub}
+                            </Badge>
+                          )) : <span className="text-sm text-slate-500">No data</span>}
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 border-t border-slate-800 text-xs text-slate-500">
+                        Data last calculated: {displaySummary.lastCalculatedAt}
+                      </div>
+                    </>
+                  );
+                } catch (error) {
+                  console.error("SUBJECT ANALYSIS FAILED", error);
+                  return <div>SUBJECT ANALYSIS FAILED</div>;
+                }
+              })()}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Bottom Widgets */}

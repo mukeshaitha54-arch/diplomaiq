@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface SubjectChartProps {
@@ -12,8 +13,21 @@ interface SubjectChartProps {
 }
 
 export function SubjectChart({ data }: SubjectChartProps) {
-  if (!data || data.length === 0) {
-    return <div className="flex h-full items-center justify-center text-slate-500">No subject data available</div>;
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const safeData = Array.isArray(data) ? data : [];
+  console.log("Chart data Subject", safeData);
+
+  if (!safeData.length) {
+    return <div className="flex h-full items-center justify-center text-slate-500">No chart data</div>;
+  }
+
+  if (!mounted) {
+    return <div className="h-full w-full bg-slate-900/20 animate-pulse rounded-md" />;
   }
 
   return (
