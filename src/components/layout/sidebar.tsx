@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, User, BarChart3, Target, MessageSquare, RefreshCw, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { insforge } from "@/lib/insforge/client";
+import { signOutAction } from "@/lib/insforge/actions";
 import { useRouter } from "next/navigation";
 
 const navigation = [
@@ -21,8 +21,7 @@ export function Sidebar() {
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await insforge.auth.signOut();
-    router.push("/login");
+    await signOutAction();
   };
 
   return (
