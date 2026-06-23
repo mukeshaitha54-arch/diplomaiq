@@ -28,11 +28,13 @@ export default async function DashboardPage() {
     .eq('id', authData.user.id)
     .single();
 
-  const { data: semesters } = await adminClient.database
+  const { data: semesters, error: semestersError } = await adminClient.database
     .from('semesters')
-    .select('semester_number, sgpa, cgpa')
+    .select('semester_number, sgpa')
     .eq('profile_id', authData.user.id)
     .order('semester_number');
+
+  console.log("Semester Data:", semesters, "Error:", semestersError);
 
   const { data: attendanceData } = await adminClient.database
     .from('attendance_records')
