@@ -1,26 +1,31 @@
-import { createAdminClient } from '@insforge/sdk';
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+require('dotenv').config({ path: '.env.local' });
+const { createClient } = require('@supabase/supabase-js');
 
-const adminClient = createAdminClient({
-  baseUrl: process.env.NEXT_PUBLIC_INSFORGE_URL,
-  apiKey: process.env.INSFORGE_API_KEY || process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY,
-});
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_INSFORGE_URL,
+  process.env.INSFORGE_API_KEY
+);
 
-async function run() {
-  console.log("Verifying Database State:");
+async function checkTable(tableName) {
+  const { data, error } = await supabase
+    .from(tableName)
+    .select('*');
   
-  const { data: att } = await adminClient.database.from('attendance_records').select('*');
-  console.log('Attendance Records Count:', att?.length);
-  if (att?.length) console.log('Latest Attendance:', att[0].attendance_percentage);
-
-  const { data: sem } = await adminClient.database.from('semesters').select('*').order('semester_number');
-  console.log('Semesters:', sem?.map(s => `Sem ${s.semester_number}: ${s.sgpa}`).join(', '));
-
-  const { data: acc } = await adminClient.database.from('academic_summary').select('*').limit(1);
-  if (acc?.length) {
-    console.log('Strong Subjects:', acc[0].strong_subjects);
-    console.log('Weak Subjects:', acc[0].weak_subjects);
+  if (error) {
+    console.log(`- ${tableName}: Error: ${error.message}`);
+  } else {
+    console.log(`- ${tableName}: ${data.length} rows`);
   }
 }
+
+async function run() {
+  console.log("Database Audit:");
+  await checkTable('student_profiles');
+  await checkTable('academic_summary');
+  await checkTable('semesters');
+  await checkTable('attendance_records');
+  await checkTable('ecet_cutoffs');
+  await checkTable('ecet_forecasts');
+}
+
 run();

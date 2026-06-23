@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useTransition, useEffect } from 'react';
 import { signInAction } from '@/lib/insforge/actions';
+import { loginAsDemo } from '@/lib/actions/demo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +61,18 @@ function LoginContent() {
       // On success, signInAction calls redirect() internally
     });
   }
+
+  const handleDemoLogin = () => {
+    setErrorMsg('');
+    startTransition(async () => {
+      const res = await loginAsDemo();
+      if (res.error) {
+        setErrorMsg(res.error);
+      } else {
+        router.push('/dashboard');
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
@@ -143,6 +156,22 @@ function LoginContent() {
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-60"
             >
               {isPending ? 'Signing in…' : 'Sign In'}
+            </Button>
+
+            <div className="relative flex items-center py-2">
+              <div className="flex-grow border-t border-slate-800"></div>
+              <span className="flex-shrink-0 mx-4 text-slate-500 text-xs uppercase">or</span>
+              <div className="flex-grow border-t border-slate-800"></div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={isPending}
+              variant="outline"
+              className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              Login as Demo Student
             </Button>
 
             <div className="text-sm text-center text-slate-400">
