@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, BookOpen, GraduationCap, HeartPulse } from "lucide-react";
 import { AchievementBadges } from "@/components/dashboard/achievement-badges";
 import { WeeklyFocus } from "@/components/dashboard/weekly-focus";
+import { ActionCenter } from "@/components/dashboard/action-center";
 
 export default async function DashboardPage() {
   const context = await getStudentContext();
@@ -116,7 +117,7 @@ export default async function DashboardPage() {
             <WeeklyFocus context={context!} />
           </div>
           <div className="md:col-span-2">
-            {/* <ActionCenter /> */}
+            <ActionCenter />
           </div>
         </div>
       </div>
