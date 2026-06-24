@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AICoachComponent } from "@/components/dashboard/ai-coach";
 import { AcademicReport } from "@/components/dashboard/academic-report";
 
@@ -9,8 +10,12 @@ export default function AICoachPage() {
         <p className="text-slate-400">Personalized guidance to improve your scores and plan your studies.</p>
       </div>
       <div className="space-y-6">
-        <AcademicReport />
-        <AICoachComponent />
+        <Suspense fallback={<div className="text-slate-400">Loading Academic Report...</div>}>
+          <AcademicReport />
+        </Suspense>
+        <Suspense fallback={<div className="text-slate-400">Loading AI Coach...</div>}>
+          <AICoachComponent />
+        </Suspense>
       </div>
     </div>
   );

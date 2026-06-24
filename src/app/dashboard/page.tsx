@@ -12,12 +12,15 @@ import { CareerReadiness } from "@/components/dashboard/career-readiness";
 import { SGPAChart } from "@/components/dashboard/sgpa-chart";
 import { DatasetSelector } from "@/components/dashboard/dataset-selector";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const datasetType = typeof searchParams.dataset === 'string' ? searchParams.dataset : 'semester';
+type PageProps = {
+  searchParams?: Promise<{
+    dataset?: string;
+  }>;
+};
+
+export default async function DashboardPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const datasetType = typeof searchParams?.dataset === 'string' ? searchParams.dataset : 'semester';
   const context = await getStudentContext(datasetType as any);
   const hasData = !!context?.profile && !!context?.academicSummary;
 

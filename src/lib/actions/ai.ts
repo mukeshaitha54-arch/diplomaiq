@@ -90,7 +90,7 @@ Expected Outcome: [What will happen if they do this]
 Time Estimate: [How much time it will take]
   `;
 
-  await logUsageAnalytics('ai_coach_use', 'AI Coach', { cgpa: academicSummary.cgpa, backlogs: academicSummary.total_backlogs });
+  await logUsageAnalytics('ai_coach_use', 'AI Coach', { cgpa: dataset.summary.aggregateScore, backlogs: dataset.summary.totalFailedSubjects });
 
   return await generateAIResponse('openai', 'gpt-4o', prompt);
 }
