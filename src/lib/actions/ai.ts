@@ -47,7 +47,16 @@ export async function getPersonalizedCoachAdvice(datasetType: string = 'semester
   const { profile, dataset, attendance, derivedMetrics, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
   
-  const predictionStr = prediction ? `\n- Predicted Final SGPA: ${prediction.predicted_sgpa}\n- Backlog Risk: ${prediction.predicted_backlogs}\n- Risk Level: ${prediction.risk_level}` : "";
+  const predictionStr = prediction ? `
+PREDICTIONS & RISKS:
+- Predicted SGPA: ${prediction.predicted_sgpa}
+- Predicted CGPA: ${prediction.predicted_cgpa}
+- Pass Probability: ${prediction.pass_probability}%
+- Risk Level: ${prediction.risk_level}
+- Predicted Backlogs: ${prediction.predicted_backlogs}
+- Improvement Opportunities: ${Array.isArray(prediction.improvement_opportunities) ? prediction.improvement_opportunities.join(" ") : "None"}
+- Subject Risks: ${JSON.stringify(prediction.subject_risk_scores || {})}
+` : "";
 
   const prompt = `
 Generate a personalized academic coaching strategy for this student.
@@ -102,7 +111,15 @@ export async function generateActionItems(datasetType: string = 'semester') {
   const { profile, dataset, attendance, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
 
-  const predictionStr = prediction ? `\nPredicted Final SGPA: ${prediction.predicted_sgpa}, Predicted Backlogs: ${prediction.predicted_backlogs}` : "";
+  const predictionStr = prediction ? `
+PREDICTIONS & RISKS:
+- Predicted SGPA: ${prediction.predicted_sgpa}
+- Predicted CGPA: ${prediction.predicted_cgpa}
+- Pass Probability: ${prediction.pass_probability}%
+- Risk Level: ${prediction.risk_level}
+- Predicted Backlogs: ${prediction.predicted_backlogs}
+- Subject Risks: ${JSON.stringify(prediction.subject_risk_scores || {})}
+` : "";
 
   const prompt = `
 You are an AI generating structured action items for an engineering student.
@@ -145,7 +162,16 @@ export async function generateAcademicReport(datasetType: string = 'semester') {
   const { profile, dataset, attendance, derivedMetrics, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
   
-  const predictionStr = prediction ? `\nPredicted Final SGPA: ${prediction.predicted_sgpa}, Predicted Backlogs: ${prediction.predicted_backlogs}` : "";
+  const predictionStr = prediction ? `
+PREDICTIONS & RISKS:
+- Predicted SGPA: ${prediction.predicted_sgpa}
+- Predicted CGPA: ${prediction.predicted_cgpa}
+- Pass Probability: ${prediction.pass_probability}%
+- Risk Level: ${prediction.risk_level}
+- Predicted Backlogs: ${prediction.predicted_backlogs}
+- Improvement Opportunities: ${Array.isArray(prediction.improvement_opportunities) ? prediction.improvement_opportunities.join(" ") : "None"}
+- Subject Risks: ${JSON.stringify(prediction.subject_risk_scores || {})}
+` : "";
 
   const prompt = `
 Generate a comprehensive Academic Report for this student.
@@ -190,7 +216,16 @@ export async function generateStudyPlan(planType: 'daily' | 'weekly' | 'exam', d
   const { profile, dataset, attendance, prediction } = context;
   const attendanceStr = attendance ? `${attendance.percentage || attendance.attendance_percentage}%` : "Unknown";
 
-  const predictionStr = prediction ? `\nPredicted Final SGPA: ${prediction.predicted_sgpa}, Predicted Backlogs: ${prediction.predicted_backlogs}` : "";
+  const predictionStr = prediction ? `
+PREDICTIONS & RISKS:
+- Predicted SGPA: ${prediction.predicted_sgpa}
+- Predicted CGPA: ${prediction.predicted_cgpa}
+- Pass Probability: ${prediction.pass_probability}%
+- Risk Level: ${prediction.risk_level}
+- Predicted Backlogs: ${prediction.predicted_backlogs}
+- Improvement Opportunities: ${Array.isArray(prediction.improvement_opportunities) ? prediction.improvement_opportunities.join(" ") : "None"}
+- Subject Risks: ${JSON.stringify(prediction.subject_risk_scores || {})}
+` : "";
 
   const prompt = `
 Generate a highly structured ${planType} study plan for an engineering diploma student.

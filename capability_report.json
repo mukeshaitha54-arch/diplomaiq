@@ -1,0 +1,12 @@
+{
+  "Semester Results": true,
+  "Mid-1": true,
+  "Mid-2": true,
+  "Internal": true,
+  "Supply": true,
+  "Current Semester": true,
+  "Endpoints": {
+    "/academic-results": "Available",
+    "/attendance": "Available"
+  }
+}

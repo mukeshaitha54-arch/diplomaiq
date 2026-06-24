@@ -16,7 +16,8 @@ export interface AssessmentPeriod {
 }
 
 export interface AcademicDataset {
-  type: 'semester' | 'mid1' | 'mid2' | 'internal';
+  type: 'semester' | 'mid1' | 'mid2' | 'internal' | 'supply' | 'current';
+  hasData: boolean;
   labels: {
     aggregate: string;
     period: string;

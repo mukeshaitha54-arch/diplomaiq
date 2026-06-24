@@ -1,9 +1,6 @@
 import { AcademicDataset, AssessmentPeriod, AssessmentSubject } from './AcademicDataset';
 
 export class SemesterAdapter {
-  /**
-   * Adapts existing `semesters`, `subjects`, and `academic_summary` into an AcademicDataset.
-   */
   static adapt(
     summaryRecord: any,
     semesterRecords: any[],
@@ -11,8 +8,7 @@ export class SemesterAdapter {
   ): AcademicDataset {
     
     const periods: AssessmentPeriod[] = semesterRecords.map(sem => {
-      // Find subjects for this semester
-      const semSubjects = subjectRecords.filter(s => s.semester_id === sem.id);
+      const semSubjects = subjectRecords.filter(s => s.semester_id === sem.id || s.semester_number === sem.semester_number);
       
       const subjects: AssessmentSubject[] = semSubjects.map(s => ({
         subjectCode: s.subject_code,
@@ -28,12 +24,13 @@ export class SemesterAdapter {
         periodScore: sem.sgpa || 0,
         isPassed: sem.is_passed !== false,
         subjects,
-        publishedDate: sem.published_date
+        publishedDate: sem.published_date || sem.created_at
       };
     });
 
     return {
       type: 'semester',
+      hasData: periods.length > 0,
       labels: {
         aggregate: 'CGPA',
         period: 'SGPA'
@@ -50,12 +47,9 @@ export class SemesterAdapter {
   }
 }
 
-export class MidAdapter {
-  /**
-   * Adapts new `assessment_instances`, `assessment_subjects`, and `assessment_summaries` into an AcademicDataset.
-   */
+export class AssessmentAdapter {
   static adapt(
-    type: 'mid1' | 'mid2' | 'internal',
+    type: 'mid1' | 'mid2' | 'internal' | 'supply' | 'current',
     summaryRecord: any,
     instanceRecords: any[],
     subjectRecords: any[]
@@ -68,7 +62,7 @@ export class MidAdapter {
         subjectCode: s.subject_code,
         subjectName: s.subject_name,
         marks: s.marks_obtained || 0,
-        maxMarks: s.max_marks || 20, // Typical for mids
+        maxMarks: s.max_marks || 20, // Handled correctly in subjects table usually
         grade: s.grade || '',
         isFailed: s.is_failed
       }));
@@ -84,6 +78,7 @@ export class MidAdapter {
 
     return {
       type,
+      hasData: periods.length > 0,
       labels: {
         aggregate: 'Overall Average',
         period: 'Performance Index'

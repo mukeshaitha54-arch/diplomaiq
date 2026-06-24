@@ -22,7 +22,7 @@ export default async function DashboardPage(props: PageProps) {
   const searchParams = await props.searchParams;
   const datasetType = typeof searchParams?.dataset === 'string' ? searchParams.dataset : 'semester';
   const context = await getStudentContext(datasetType as any);
-  const hasData = !!context?.profile && !!context?.academicSummary;
+  const hasData = !!context?.profile && !!context?.academicSummary && !!context?.dataset?.hasData;
 
   let displaySummary: any = null;
   if (hasData && context) {
@@ -32,7 +32,7 @@ export default async function DashboardPage(props: PageProps) {
       : "N/A";
     
     displaySummary = {
-      cgpa: academicSummary.cgpa || (academicSummary as any).current_cgpa,
+      cgpa: academicSummary.cgpa || (academicSummary as any).current_cgpa || 0,
       totalBacklogs: academicSummary.total_backlogs || (academicSummary as any).active_backlogs || 0,
       attendancePercentage: latestAttendance,
       derivedMetrics: {
@@ -44,10 +44,6 @@ export default async function DashboardPage(props: PageProps) {
     };
   }
 
-  if (!displaySummary) {
-    return <div>PAGE WORKS - NO SUMMARY</div>;
-  }
-
   try {
     return (
       <div className="space-y-6">
@@ -55,6 +51,23 @@ export default async function DashboardPage(props: PageProps) {
           <AchievementBadges context={context!} />
           <DatasetSelector activeDataset={datasetType} />
         </div>
+        
+        {!hasData ? (
+          <Card className="bg-slate-900 border-slate-800 p-12 text-center">
+            <CardContent className="flex flex-col items-center justify-center space-y-4">
+              <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-2">
+                <BookOpen className="w-8 h-8 text-slate-500" />
+              </div>
+              <h3 className="text-xl font-medium text-white">No data available</h3>
+              <p className="text-slate-400">There are no records for the selected dataset ({datasetType}). Press Sync to retrieve results from SBTET.</p>
+              <div className="mt-4">
+                 <SyncHealthCard context={context!} />
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+
         
         {/* Top Stat Cards / Metrics Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -209,6 +222,8 @@ export default async function DashboardPage(props: PageProps) {
           <CareerReadiness context={context!} />
           <RecentActivityFeed />
         </div>
+        </>
+        )}
       </div>
     );
   } catch (error) {

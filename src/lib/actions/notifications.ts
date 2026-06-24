@@ -100,16 +100,16 @@ export async function generateSystemNotifications(context: StudentContext) {
 
     // 3. Mid Risk Alerts / Prediction Warnings
     if (context.prediction) {
-      if (context.prediction.risk_level === 'HIGH' && !recentTitles.has("High Risk Assessment")) {
+      if (context.prediction.risk_level === 'High' && !recentTitles.has("High Risk Assessment")) {
         newNotifications.push({
           profile_id: userId,
           title: "High Risk Assessment",
-          message: `Your ${context.prediction.based_on_assessment} results indicate a HIGH risk for final exams. Predicted ${context.prediction.predicted_backlogs} backlogs.`,
+          message: `Your recent results indicate a HIGH risk for final exams. Predicted ${context.prediction.predicted_backlogs} backlogs.`,
           type: 'warning'
         });
       }
       
-      if (context.prediction.predicted_backlogs > 0 && context.prediction.risk_level !== 'HIGH' && !recentTitles.has("Predicted Backlog Warning")) {
+      if (context.prediction.predicted_backlogs > 0 && context.prediction.risk_level !== 'High' && !recentTitles.has("Predicted Backlog Warning")) {
          newNotifications.push({
           profile_id: userId,
           title: "Predicted Backlog Warning",

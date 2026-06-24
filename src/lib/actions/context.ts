@@ -3,7 +3,7 @@
 import { createInsForgeServerClient } from "@/lib/insforge/server";
 import { cache } from "react";
 import { AcademicDataset } from "../adapters/AcademicDataset";
-import { SemesterAdapter, MidAdapter } from "../adapters";
+import { SemesterAdapter, AssessmentAdapter } from "../adapters";
 
 export interface StudentContext {
   profile: any;
@@ -49,7 +49,7 @@ export interface DerivedMetrics {
   };
 }
 
-export const getStudentContext = cache(async (datasetType: 'semester' | 'mid1' | 'mid2' | 'internal' = 'semester'): Promise<StudentContext | null> => {
+export const getStudentContext = cache(async (datasetType: 'semester' | 'mid1' | 'mid2' | 'internal' | 'supply' | 'current' = 'semester'): Promise<StudentContext | null> => {
   const { auth } = await createInsForgeServerClient();
   const { data: authData } = await auth.getCurrentUser();
   if (!authData?.user) return null;
@@ -93,7 +93,7 @@ export const getStudentContext = cache(async (datasetType: 'semester' | 'mid1' |
       subsData = data || [];
     }
     
-    dataset = MidAdapter.adapt(datasetType, summaryRes.data, instancesRes.data || [], subsData);
+    dataset = AssessmentAdapter.adapt(datasetType, summaryRes.data, instancesRes.data || [], subsData);
   }
 
   // Compute generic metrics

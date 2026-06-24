@@ -7,15 +7,19 @@ import { cn } from "@/lib/utils";
 import { signOutAction } from "@/lib/insforge/actions";
 import { useRouter } from "next/navigation";
 
-const navigation = [
+const baseNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Academic Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "ECET Engine", href: "/dashboard/ecet", icon: Target },
   { name: "AI Coach", href: "/dashboard/coach", icon: MessageSquare },
   { name: "Sync Data", href: "/dashboard/sync", icon: RefreshCw },
-  { name: "Mid-Sem Entry", href: "/dashboard/mid-entry", icon: Target }, // Using Target icon or similar
-  { name: "Profile", href: "/dashboard/profile", icon: User },
 ];
+
+if (process.env.NEXT_PUBLIC_ENABLE_MANUAL_MIDS === 'true') {
+  baseNavigation.push({ name: "Mid-Sem Entry", href: "/dashboard/mid-entry", icon: Target });
+}
+
+baseNavigation.push({ name: "Profile", href: "/dashboard/profile", icon: User });
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -29,7 +33,7 @@ export function Sidebar() {
     <div className="hidden border-r border-slate-800 bg-slate-950/50 md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 pt-16">
       <div className="flex flex-col flex-grow pt-5 overflow-y-auto">
         <nav className="flex-1 px-4 pb-4 space-y-1">
-          {navigation.map((item) => {
+          {baseNavigation.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
