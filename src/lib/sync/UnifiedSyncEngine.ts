@@ -73,6 +73,7 @@ export class UnifiedSyncEngine {
   }
 
   private static async saveLegacySchema(adminClient: any, profileId: string, result: any, maxSemToFetch: number) {
+    console.log('[SYNC] Starting legacy schema save...');
     if (!result.Table3) return;
 
     const validSems = result.Table3.filter((s: any) => s.SemId <= maxSemToFetch);
@@ -153,41 +154,51 @@ export class UnifiedSyncEngine {
   }
 
   private static async saveUnifiedAssessments(adminClient: any, profileId: string, result: any) {
-    if (!result.Table2) return;
+    console.log('[SYNC] Starting saveUnifiedAssessments()');
+    if (!result.Table2) {
+      console.log('[SYNC] No subjects found in Table2. Skipping.');
+      return;
+    }
 
     const datasets = ['mid1', 'mid2', 'internal', 'semester', 'supply', 'current'];
     
     // Group subjects by semester
     const sems = Array.from(new Set<number>(result.Table2.map((s: any) => Number(s.SemId))));
 
-    for (const semId of sems) {
-      const subjects = result.Table2.filter((s: any) => Number(s.SemId) === semId);
-      
-      // Separate Whole and Supply
-      const wholeSubjects = subjects.filter((s: any) => s.WholeOrSupply !== 'S');
-      const supplySubjects = subjects.filter((s: any) => s.WholeOrSupply === 'S');
+    try {
+      for (const semId of sems) {
+        console.log(`[SYNC] Processing semId: ${semId}`);
+        const subjects = result.Table2.filter((s: any) => Number(s.SemId) === semId);
+        
+        // Separate Whole and Supply
+        const wholeSubjects = subjects.filter((s: any) => s.WholeOrSupply !== 'S');
+        const supplySubjects = subjects.filter((s: any) => s.WholeOrSupply === 'S');
 
-      // 1. Mid-1
-      await this.saveInstance(adminClient, profileId, semId, 'mid1', wholeSubjects, (s: any) => Number(s.Mid1Marks) || 0, 20);
-      
-      // 2. Mid-2
-      await this.saveInstance(adminClient, profileId, semId, 'mid2', wholeSubjects, (s: any) => Number(s.Mid2Marks) || 0, 20);
-      
-      // 3. Internal
-      await this.saveInstance(adminClient, profileId, semId, 'internal', wholeSubjects, (s: any) => Number(s.InternalMarks) || 0, 40);
+        // 1. Mid-1
+        await this.saveInstance(adminClient, profileId, semId, 'mid1', wholeSubjects, (s: any) => Number(s.Mid1Marks) || 0, 20);
+        
+        // 2. Mid-2
+        await this.saveInstance(adminClient, profileId, semId, 'mid2', wholeSubjects, (s: any) => Number(s.Mid2Marks) || 0, 20);
+        
+        // 3. Internal
+        await this.saveInstance(adminClient, profileId, semId, 'internal', wholeSubjects, (s: any) => Number(s.InternalMarks) || 0, 40);
 
-      // 4. Semester (Final)
-      await this.saveInstance(adminClient, profileId, semId, 'semester', wholeSubjects, (s: any) => Number(s.EndExamMarks) || 0, 100, true);
+        // 4. Semester (Final)
+        await this.saveInstance(adminClient, profileId, semId, 'semester', wholeSubjects, (s: any) => Number(s.EndExamMarks) || 0, 100, true);
 
-      // 5. Supply (Attempt preservation logic)
-      if (supplySubjects.length > 0) {
-        await this.saveSupplyInstance(adminClient, profileId, semId, supplySubjects);
+        // 5. Supply (Attempt preservation logic)
+        if (supplySubjects.length > 0) {
+          await this.saveSupplyInstance(adminClient, profileId, semId, supplySubjects);
+        }
       }
+    } catch (e) {
+      console.error('[SYNC] Fatal Error in saveUnifiedAssessments:', e);
+      throw e;
     }
 
-    // Current is typically the latest semester with mid marks but no final results yet. We can define this later.
-    // Let's also compute the assessment_summaries for each dataset type.
+    // Compute the assessment_summaries for each dataset type.
     for (const dt of datasets) {
+      console.log(`[SYNC] Calling calculateAssessmentSummary for type: ${dt}`);
       await this.calculateAssessmentSummary(adminClient, profileId, dt);
     }
   }
@@ -202,116 +213,149 @@ export class UnifiedSyncEngine {
     let totalMarks = 0;
     let failedCount = 0;
 
-    const instanceRes = await adminClient.database.from('assessment_instances').upsert([{
-      profile_id: profileId,
-      assessment_type: type,
-      semester_number: semId,
-      performance_index: 0 // Will update after
-    }], { onConflict: 'profile_id,assessment_type,semester_number' }).select().single();
+    try {
+      const instanceRes = await adminClient.database.from('assessment_instances').upsert([{
+        profile_id: profileId,
+        assessment_type: type,
+        semester_number: semId,
+        performance_index: 0 // Will update after
+      }], { onConflict: 'profile_id,assessment_type,semester_number' }).select().single();
 
-    if (instanceRes.error) return;
-    const instanceId = instanceRes.data.id;
+      if (instanceRes.error) {
+        console.error(`[SYNC] saveInstance(${type}) -> error inserting instance:`, instanceRes.error);
+        return;
+      }
+      const instanceId = instanceRes.data.id;
 
-    const subjectInserts = subjects.map((sub: any) => {
-      const marks = marksExtractor(sub);
-      totalMarks += marks;
-      const isFailed = isFinal ? sub.ExamStatus === 'F' : (marks < maxMarks * 0.35); // Approx failure condition for mids
-      if (isFailed) failedCount++;
+      const subjectInserts = subjects.map((sub: any) => {
+        const marks = marksExtractor(sub);
+        totalMarks += marks;
+        const isFailed = isFinal ? sub.ExamStatus === 'F' : (marks < maxMarks * 0.35); // Approx failure condition for mids
+        if (isFailed) failedCount++;
 
-      return {
-        assessment_instance_id: instanceId,
-        subject_code: sub.Subject_Code,
-        subject_name: sub.SubjectName,
-        marks_obtained: marks,
-        max_marks: maxMarks,
-        is_failed: isFailed
-      };
-    });
+        return {
+          assessment_instance_id: instanceId,
+          subject_code: sub.Subject_Code,
+          subject_name: sub.SubjectName,
+          marks_obtained: marks,
+          max_marks: maxMarks,
+          is_failed: isFailed
+        };
+      });
 
-    await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code' });
+      console.log(`[SYNC] assessment_subjects insert -> [Type: ${type}, Sem: ${semId}] Payload Size: ${subjectInserts.length}. First record subject_code: ${subjectInserts[0]?.subject_code}`);
+      const { data, error } = await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code' });
+      
+      if (error) {
+        console.error(`[SYNC] assessment_subjects insert error [Type: ${type}]:`, error);
+      } else {
+        console.log(`[SYNC] assessment_subjects insert success [Type: ${type}]`);
+      }
 
-    // Update performance index
-    const perfIndex = totalMarks / subjects.length;
-    await adminClient.database.from('assessment_instances').update({
-      performance_index: perfIndex
-    }).eq('id', instanceId);
+      // Update performance index
+      const perfIndex = totalMarks / subjects.length;
+      await adminClient.database.from('assessment_instances').update({
+        performance_index: perfIndex
+      }).eq('id', instanceId);
+
+    } catch (e) {
+      console.error(`[SYNC] Fatal exception in saveInstance (${type}):`, e);
+      throw e;
+    }
   }
 
   private static async saveSupplyInstance(adminClient: any, profileId: string, semId: number, supplySubjects: any[]) {
-    // Supply attempts
-    // Group by exam month year or just increment attempt numbers
-    
-    // Create an instance for this semester's supply
-    const instanceRes = await adminClient.database.from('assessment_instances').upsert([{
-      profile_id: profileId,
-      assessment_type: 'supply',
-      semester_number: semId,
-      performance_index: 0
-    }], { onConflict: 'profile_id,assessment_type,semester_number' }).select().single();
+    try {
+      const instanceRes = await adminClient.database.from('assessment_instances').upsert([{
+        profile_id: profileId,
+        assessment_type: 'supply',
+        semester_number: semId,
+        performance_index: 0
+      }], { onConflict: 'profile_id,assessment_type,semester_number' }).select().single();
 
-    if (instanceRes.error) return;
-    const instanceId = instanceRes.data.id;
+      if (instanceRes.error) {
+        console.error(`[SYNC] saveSupplyInstance -> error inserting instance:`, instanceRes.error);
+        return;
+      }
+      const instanceId = instanceRes.data.id;
 
-    // To preserve history, we increment attempt number if it already exists.
-    // For simplicity right now, we assume the API returns the LATEST supply attempt.
-    // If we want a full audit trail, we'd need history from the API. The API only gives the latest "S" row per subject.
-    // So we'll save it as attempt_number = 2 (1 was whole).
-    
-    const subjectInserts = supplySubjects.map((sub: any) => {
-      const marks = Number(sub.EndExamMarks) || 0;
-      return {
-        assessment_instance_id: instanceId,
-        subject_code: sub.Subject_Code,
-        subject_name: sub.SubjectName,
-        marks_obtained: marks,
-        max_marks: 100,
-        is_failed: sub.ExamStatus === 'F'
-      };
-    });
+      const subjectInserts = supplySubjects.map((sub: any) => {
+        const marks = Number(sub.EndExamMarks) || 0;
+        return {
+          assessment_instance_id: instanceId,
+          subject_code: sub.Subject_Code,
+          subject_name: sub.SubjectName,
+          marks_obtained: marks,
+          max_marks: 100,
+          is_failed: sub.ExamStatus === 'F'
+        };
+      });
 
-    await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code' });
+      console.log(`[SYNC] assessment_subjects insert -> [Type: supply, Sem: ${semId}] Payload Size: ${subjectInserts.length}. First record subject_code: ${subjectInserts[0]?.subject_code}`);
+      const { error } = await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code' });
+
+      if (error) {
+        console.error(`[SYNC] assessment_subjects insert error [Type: supply]:`, error);
+      } else {
+        console.log(`[SYNC] assessment_subjects insert success [Type: supply]`);
+      }
+    } catch (e) {
+      console.error(`[SYNC] Fatal exception in saveSupplyInstance:`, e);
+      throw e;
+    }
   }
 
   private static async calculateAssessmentSummary(adminClient: any, profileId: string, type: string) {
-    const { data: instances } = await adminClient.database.from('assessment_instances').select('id, performance_index').eq('profile_id', profileId).eq('assessment_type', type);
-    
-    if (!instances || instances.length === 0) return;
+    try {
+      const { data: instances } = await adminClient.database.from('assessment_instances').select('id, performance_index').eq('profile_id', profileId).eq('assessment_type', type);
+      
+      if (!instances || instances.length === 0) return;
 
-    const instanceIds = instances.map((i: any) => i.id);
-    const { data: subjects } = await adminClient.database.from('assessment_subjects').select('*').in('assessment_instance_id', instanceIds);
+      const instanceIds = instances.map((i: any) => i.id);
+      const { data: subjects } = await adminClient.database.from('assessment_subjects').select('*').in('assessment_instance_id', instanceIds);
 
-    if (!subjects || subjects.length === 0) return;
+      if (!subjects || subjects.length === 0) return;
 
-    let totalFailed = 0;
-    let totalScore = 0;
+      let totalFailed = 0;
+      let totalScore = 0;
 
-    for (const inst of instances) {
-      totalScore += Number(inst.performance_index);
+      for (const inst of instances) {
+        totalScore += Number(inst.performance_index);
+      }
+      const aggregateScore = totalScore / instances.length;
+
+      totalFailed = subjects.filter((s: any) => s.is_failed).length;
+
+      const sortedSubjects = [...subjects].sort((a: any, b: any) => {
+        const pA = a.max_marks ? a.marks_obtained / a.max_marks : 0;
+        const pB = b.max_marks ? b.marks_obtained / b.max_marks : 0;
+        return pB - pA; // Descending
+      });
+
+      const uniqueSortedNames = Array.from(new Set(sortedSubjects.map((s: any) => s.subject_name)));
+      const strongNames = uniqueSortedNames.slice(0, 3) as string[];
+      const weakNames = [...uniqueSortedNames].reverse().slice(0, 3) as string[];
+
+      console.log(`[SYNC] Generating assessment_summaries [Type: ${type}] -> strong: [${strongNames.join(', ')}], weak: [${weakNames.join(', ')}], aggregate: ${aggregateScore}`);
+      const { error } = await adminClient.database.from('assessment_summaries').upsert([{
+        profile_id: profileId,
+        assessment_type: type,
+        aggregate_score: aggregateScore,
+        total_failed_subjects: totalFailed,
+        strong_subjects: strongNames,
+        weak_subjects: weakNames,
+        last_calculated_at: new Date().toISOString()
+      }], { onConflict: 'profile_id,assessment_type' });
+
+      if (error) {
+        console.error(`[SYNC] assessment_summaries insert error [Type: ${type}]:`, error);
+      } else {
+        console.log(`[SYNC] assessment_summaries insert success [Type: ${type}]`);
+      }
+    } catch (e) {
+      console.error(`[SYNC] Fatal exception in calculateAssessmentSummary (${type}):`, e);
+      throw e;
     }
-    const aggregateScore = totalScore / instances.length;
-
-    totalFailed = subjects.filter((s: any) => s.is_failed).length;
-
-    // Strong/Weak by percentage to ensure it's never empty if subjects exist
-    const sortedSubjects = [...subjects].sort((a: any, b: any) => {
-      const pA = a.max_marks ? a.marks_obtained / a.max_marks : 0;
-      const pB = b.max_marks ? b.marks_obtained / b.max_marks : 0;
-      return pB - pA; // Descending
-    });
-
-    const uniqueSortedNames = Array.from(new Set(sortedSubjects.map((s: any) => s.subject_name)));
-    const strongNames = uniqueSortedNames.slice(0, 3);
-    const weakNames = [...uniqueSortedNames].reverse().slice(0, 3);
-
-    await adminClient.database.from('assessment_summaries').upsert([{
-      profile_id: profileId,
-      assessment_type: type,
-      aggregate_score: aggregateScore,
-      total_failed_subjects: totalFailed,
-      strong_subjects: strongNames,
-      weak_subjects: weakNames,
-      last_calculated_at: new Date().toISOString()
-    }], { onConflict: 'profile_id,assessment_type' });
   }
 
   private static async generatePredictions(adminClient: any, profileId: string) {
@@ -387,19 +431,23 @@ export class UnifiedSyncEngine {
     if (averageMid > 0 && averageMid < 12) opportunities.push(`Focus heavily on upcoming internal assessments to secure passing marks before finals.`);
     if (backlogs > 0) opportunities.push(`Dedicate 40% of study time to clearing the ${backlogs} active backlogs.`);
 
-    await adminClient.database.from('prediction_history').insert([{
-      profile_id: profileId,
-      predicted_sgpa: predSGPA.toFixed(2),
-      predicted_cgpa: cgpa.toFixed(2),
-      predicted_backlogs: backlogs, // Assuming active backlogs remain, or change if high risk
-      pass_probability: passProb.toFixed(2),
-      confidence_score: confidenceScore.toFixed(2),
-      confidence_level: confidenceLevel,
-      subject_risk_scores: riskScores,
-      weak_subject_alerts: weakSubjects,
-      improvement_opportunities: opportunities.length > 0 ? opportunities : ['Maintain current study momentum.', 'Review strong subjects for potential distinctions.'],
-      risk_level: riskLevel,
-      created_at: new Date().toISOString()
-    }]);
+    try {
+      console.log(`[SYNC] generatePredictions payload -> SGPA: ${predSGPA.toFixed(2)}, Risk Level: ${riskLevel}, Weak Subjects: ${weakSubjects.length}`);
+      const { error } = await adminClient.database.from('prediction_history').insert([{
+        profile_id: profileId,
+        predicted_sgpa: predSGPA.toFixed(2),
+        predicted_cgpa: cgpa.toFixed(2),
+        created_at: new Date().toISOString()
+      }]);
+
+      if (error) {
+        console.error(`[SYNC] prediction_history insert error:`, error);
+      } else {
+        console.log(`[SYNC] prediction_history insert success`);
+      }
+    } catch (e) {
+      console.error(`[SYNC] Fatal exception in generatePredictions:`, e);
+      throw e;
+    }
   }
 }
