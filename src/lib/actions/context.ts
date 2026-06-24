@@ -159,13 +159,25 @@ function computeDerivedMetrics(dataset: AcademicDataset, attendance: any): Deriv
           totalDiff += Math.abs(scores[i] - scores[i-1]);
         }
         const avgDiff = totalDiff / (scores.length - 1);
-        consistencyScore = Math.max(0, 100 - (avgDiff * 50));
+        
+        let aggMaxConsistency = 100;
+        if (dataset.type === 'semester') aggMaxConsistency = 10;
+        else if (dataset.type === 'mid1' || dataset.type === 'mid2') aggMaxConsistency = 20;
+        else if (dataset.type === 'internal') aggMaxConsistency = 40;
+
+        const normalizedDiff = (avgDiff / aggMaxConsistency) * 100; // 0 to 100 scale
+        consistencyScore = Math.max(0, 100 - (normalizedDiff * 1.5)); // Penalize 1.5x of diff
       }
     }
   }
 
   const aggregateScore = Number(dataset.summary.aggregateScore) || 0;
-  const aggMax = dataset.type === 'semester' ? 10 : 100;
+  
+  let aggMax = 100;
+  if (dataset.type === 'semester') aggMax = 10;
+  else if (dataset.type === 'mid1' || dataset.type === 'mid2') aggMax = 20;
+  else if (dataset.type === 'internal') aggMax = 40;
+
   const aggregateContribution = Math.min(40, (aggregateScore / aggMax) * 40);
 
   const attnd = attendance ? (Number(attendance.percentage) || Number(attendance.attendance_percentage) || 0) : 0;

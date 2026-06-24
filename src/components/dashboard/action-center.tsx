@@ -82,25 +82,50 @@ export function ActionCenter({ context }: { context?: StudentContext }) {
           </div>
         ) : context?.prediction ? (
           <div className="space-y-4">
-            <div className="flex flex-col gap-2 p-4 rounded-lg border border-slate-800 bg-slate-950/50">
+            <div className="flex flex-col gap-4 p-4 rounded-lg border border-slate-800 bg-slate-950/50">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-indigo-400" />
                   <h4 className="text-sm font-medium text-slate-200">AI Prediction Active</h4>
                 </div>
-                <Badge variant="outline" className={getPriorityColor(context.prediction.risk_level)}>
-                  {context.prediction.risk_level} RISK
+                <Badge variant="outline" className={getPriorityColor(context.prediction.risk_level || 'Low')}>
+                  {context.prediction.risk_level || 'Low'} RISK
                 </Badge>
               </div>
-              <div className="pl-6 text-sm text-slate-400 space-y-1">
-                <p>Based on your {context.prediction.based_on_assessment} results, your predicted final score is <strong className="text-slate-200">{context.prediction.predicted_sgpa}</strong>.</p>
-                {context.prediction.predicted_backlogs > 0 && (
-                  <p className="text-rose-400">Warning: You are at risk of {context.prediction.predicted_backlogs} backlogs.</p>
-                )}
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex flex-col">
+                  <span className="text-slate-500 text-xs">Predicted SGPA</span>
+                  <span className="text-slate-200 font-medium">{context.prediction.predicted_sgpa || 'N/A'}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-slate-500 text-xs">Predicted CGPA</span>
+                  <span className="text-slate-200 font-medium">{context.prediction.predicted_cgpa || 'N/A'}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-slate-500 text-xs">Pass Probability</span>
+                  <span className="text-emerald-400 font-medium">{context.prediction.pass_probability ? `${context.prediction.pass_probability}%` : 'N/A'}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-slate-500 text-xs">Backlog Risk</span>
+                  <span className="text-rose-400 font-medium">{context.prediction.pass_probability ? `${(100 - Number(context.prediction.pass_probability)).toFixed(2)}%` : 'N/A'}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-slate-500 text-xs">Confidence Score</span>
+                  <span className="text-slate-200 font-medium">{context.prediction.confidence_score || 'N/A'}</span>
+                </div>
               </div>
-              <div className="pl-6 mt-2">
-                <Button onClick={handleGenerate} disabled={loading} variant="outline" size="sm" className="h-8 text-xs border-indigo-600 text-indigo-400 hover:bg-indigo-950">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+
+              {context.prediction.predicted_backlogs > 0 && (
+                <div className="text-sm text-rose-400 bg-rose-500/10 p-3 rounded-md border border-rose-500/20">
+                  <AlertCircle className="h-4 w-4 inline mr-2" />
+                  Warning: You are at risk of {context.prediction.predicted_backlogs} backlogs.
+                </div>
+              )}
+
+              <div className="mt-2 border-t border-slate-800 pt-4">
+                <Button onClick={handleGenerate} disabled={loading} variant="outline" size="sm" className="w-full sm:w-auto h-9 text-sm border-indigo-600 text-indigo-400 hover:bg-indigo-950">
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
                   Generate Action Plan
                 </Button>
               </div>
@@ -109,7 +134,11 @@ export function ActionCenter({ context }: { context?: StudentContext }) {
         ) : (
           !loading && (
             <div className="text-center py-8 text-slate-500 text-sm">
-              Click generate to analyze your profile and find high-impact tasks.
+              <p className="mb-4">No prediction data available yet.</p>
+              <Button onClick={handleGenerate} disabled={loading} variant="outline" className="border-indigo-600 text-indigo-400 hover:bg-indigo-950">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Generate Action Plan
+              </Button>
             </div>
           )
         )}

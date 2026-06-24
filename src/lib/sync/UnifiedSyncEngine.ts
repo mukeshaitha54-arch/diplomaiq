@@ -296,12 +296,16 @@ export class UnifiedSyncEngine {
 
     totalFailed = subjects.filter((s: any) => s.is_failed).length;
 
-    // Strong/Weak
-    const strong = subjects.filter((s: any) => s.marks_obtained >= s.max_marks * 0.8).sort((a: any, b: any) => b.marks_obtained - a.marks_obtained).slice(0, 4);
-    const weak = subjects.filter((s: any) => s.is_failed).slice(0, 4);
-    
-    const strongNames = Array.from(new Set(strong.map((s: any) => s.subject_name)));
-    const weakNames = Array.from(new Set(weak.map((s: any) => s.subject_name)));
+    // Strong/Weak by percentage to ensure it's never empty if subjects exist
+    const sortedSubjects = [...subjects].sort((a: any, b: any) => {
+      const pA = a.max_marks ? a.marks_obtained / a.max_marks : 0;
+      const pB = b.max_marks ? b.marks_obtained / b.max_marks : 0;
+      return pB - pA; // Descending
+    });
+
+    const uniqueSortedNames = Array.from(new Set(sortedSubjects.map((s: any) => s.subject_name)));
+    const strongNames = uniqueSortedNames.slice(0, 3);
+    const weakNames = [...uniqueSortedNames].reverse().slice(0, 3);
 
     await adminClient.database.from('assessment_summaries').upsert([{
       profile_id: profileId,

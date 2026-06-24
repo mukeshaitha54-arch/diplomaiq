@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, BarChart3, Target, MessageSquare, RefreshCw, LogOut } from "lucide-react";
+import { LayoutDashboard, User, BarChart3, Target, MessageSquare, RefreshCw, LogOut, Clock, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutAction } from "@/lib/insforge/actions";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,8 @@ if (process.env.NEXT_PUBLIC_ENABLE_MANUAL_MIDS === 'true') {
   baseNavigation.push({ name: "Mid-Sem Entry", href: "/dashboard/mid-entry", icon: Target });
 }
 
+baseNavigation.push({ name: "Academic Timeline", href: "/dashboard/timeline", icon: Clock });
+baseNavigation.push({ name: "Results", href: "/dashboard/results", icon: Layers });
 baseNavigation.push({ name: "Profile", href: "/dashboard/profile", icon: User });
 
 export function Sidebar() {
