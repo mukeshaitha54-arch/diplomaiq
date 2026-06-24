@@ -224,13 +224,11 @@ export class UnifiedSyncEngine {
         subject_name: sub.SubjectName,
         marks_obtained: marks,
         max_marks: maxMarks,
-        grade: isFinal ? sub.HybridGrade : '',
-        is_failed: isFailed,
-        attempt_number: 1
+        is_failed: isFailed
       };
     });
 
-    await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code,attempt_number' });
+    await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code' });
 
     // Update performance index
     const perfIndex = totalMarks / subjects.length;
@@ -267,13 +265,11 @@ export class UnifiedSyncEngine {
         subject_name: sub.SubjectName,
         marks_obtained: marks,
         max_marks: 100,
-        grade: sub.HybridGrade,
-        is_failed: sub.ExamStatus === 'F',
-        attempt_number: 2 // Marking as 2nd attempt
+        is_failed: sub.ExamStatus === 'F'
       };
     });
 
-    await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code,attempt_number' });
+    await adminClient.database.from('assessment_subjects').upsert(subjectInserts, { onConflict: 'assessment_instance_id,subject_code' });
   }
 
   private static async calculateAssessmentSummary(adminClient: any, profileId: string, type: string) {

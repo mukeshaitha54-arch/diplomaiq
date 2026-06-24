@@ -176,7 +176,10 @@ export default async function ResultsPage() {
                const originalFails = relatedRegular ? relatedRegular.subjects.filter((s: any) => s.is_failed) : [];
                
                // Combine
-               const combined = [...originalFails.map((s: any) => ({...s, attempt_number: 1})), ...inst.subjects];
+               const combined = [
+                 ...originalFails.map((s: any) => ({...s, attempt_number: 1})), 
+                 ...inst.subjects.map((s: any) => ({...s, attempt_number: 2}))
+               ];
                
                return (
                 <Card key={i} className="bg-slate-900 border-slate-800">
